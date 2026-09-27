@@ -1,0 +1,53 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!-- Cut Browser's pane in Settings, inserted into preferences.xhtml at build
+     time. Behaviour lives in chrome://browser/content/cut/cut-prefs.js. -->
+<html:template id="template-paneCut">
+<hbox id="cutCategory" class="subcategory" hidden="true" data-category="paneCut">
+  <html:h1>Cut Browser</html:h1>
+</hbox>
+
+<groupbox id="cutLayoutGroup" data-category="paneCut" hidden="true">
+  <label><html:h2>Layout</html:h2></label>
+  <html:div class="cut-pane-stack">
+    <html:moz-toggle id="cutCompact" label="Compact mode" description="Hide the sidebar and toolbar until you point at the edge of the window. Shortcut: Ctrl+Alt+C."></html:moz-toggle>
+    <html:moz-toggle id="cutFloatingUrlbar" label="Floating address bar" description="While you type, the address bar opens in the middle of the window and dims the page behind it."></html:moz-toggle>
+    <html:moz-toggle id="cutVerticalTabs" label="Tabs in the sidebar" description="Show tabs down the side of the window. Turn off for tabs along the top."></html:moz-toggle>
+  </html:div>
+</groupbox>
+
+<groupbox id="cutSearchGroup" data-category="paneCut" hidden="true">
+  <label><html:h2>Cut Search</html:h2></label>
+  <description class="description-deemphasized">Searches from the address bar and the new tab page go to Cut Search. It runs on this computer, asks several search engines for you and strips tracking from results. The engines get your search, but no cookies or anything that identifies your browser, and never see what you click.</description>
+  <html:div id="cutSearchStatus" class="cut-status" role="status"></html:div>
+  <hbox class="cut-actions">
+    <button id="cutSearchOpenSettings" is="highlightable-button" label="Search settings…"/>
+    <button id="cutSearchRestart" is="highlightable-button" label="Restart Cut Search"/>
+  </hbox>
+  <html:moz-toggle id="cutSearchEnabled" label="Run Cut Search on this computer" description="Turn off to use your own Cut Search server below, or another search engine."></html:moz-toggle>
+  <html:label class="cut-field" for="cutSearchRemote">
+    <html:span>Your own Cut Search server (optional)</html:span>
+    <html:input id="cutSearchRemote" type="url" placeholder="https://cut.example.org" spellcheck="false"/>
+  </html:label>
+</groupbox>
+
+<groupbox id="cutPrivacyGroup" data-category="paneCut" hidden="true">
+  <label><html:h2>Privacy</html:h2></label>
+  <html:ul class="cut-facts">
+    <html:li>No telemetry, studies, experiments or crash reports are sent anywhere.</html:li>
+    <html:li>Strict tracking protection, HTTPS-Only Mode and Global Privacy Control are on.</html:li>
+    <html:li>uBlock Origin blocks ads and trackers (see Extensions and Themes).</html:li>
+    <html:li>AI features, sponsored content and Mozilla's promotions are off.</html:li>
+  </html:ul>
+  <hbox class="cut-actions">
+    <button id="cutOpenPrivacy" is="highlightable-button" label="Privacy and security settings"/>
+  </hbox>
+</groupbox>
+
+<groupbox id="cutAboutGroup" data-category="paneCut" hidden="true">
+  <label><html:h2>About</html:h2></label>
+  <description id="cutVersion" class="description-deemphasized"></description>
+</groupbox>
+</html:template>

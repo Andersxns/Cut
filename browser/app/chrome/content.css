@@ -1,0 +1,116 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Cut's colors in Firefox's own pages. Registered as a user sheet by
+ * CutBrowser.sys.mjs, so every rule is scoped to specific pages. */
+
+@-moz-document url-prefix("about:newtab"), url-prefix("about:home"), url-prefix("about:privatebrowsing") {
+  :root {
+    --cut-accent: light-dark(#c4461c, #ff8a5c) !important;
+    --newtab-background-color: light-dark(#f7f7f8, #1c1c1f) !important;
+    --newtab-background-color-secondary: light-dark(#ffffff, #26262a) !important;
+    --newtab-background-card: light-dark(#ffffff, #26262a) !important;
+    --newtab-primary-action-background: var(--cut-accent) !important;
+    --newtab-primary-element-text-color: light-dark(#ffffff, #1a0e08) !important;
+    --newtab-button-background: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.07)) !important;
+    --newtab-button-hover-background: light-dark(rgb(0 0 0 / 0.09), rgb(255 255 255 / 0.11)) !important;
+    --newtab-element-hover-color: light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.07)) !important;
+    --newtab-element-active-color: light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.12)) !important;
+    --newtab-wordmark-color: light-dark(#1d1d1f, #ececef) !important;
+    --color-accent-primary: var(--cut-accent) !important;
+    --color-accent-primary-hover: color-mix(in srgb, var(--cut-accent) 85%, currentColor) !important;
+    --color-accent-primary-active: color-mix(in srgb, var(--cut-accent) 70%, currentColor) !important;
+    --focus-outline-color: var(--cut-accent) !important;
+  }
+
+  body {
+    background-color: var(--newtab-background-color) !important;
+  }
+
+  /* Room for "Cut Browser" beside the logo (Firefox sizes it for one word). */
+  .logo-and-wordmark .wordmark {
+    width: 165px !important;
+    background-size: 165px !important;
+  }
+
+  .top-site-outer .tile {
+    border-radius: 12px !important;
+  }
+}
+
+@-moz-document url-prefix("about:privatebrowsing") {
+  :root {
+    --cut-private: light-dark(#6a33d4, #b18cff) !important;
+  }
+
+  .wordmark {
+    width: 260px !important;
+    background-size: 260px !important;
+  }
+}
+
+/* ---------- Settings: Cut's accent, and Cut Browser's own pane ---------- */
+
+@-moz-document url-prefix("about:preferences"), url-prefix("about:settings") {
+  :root {
+    --color-accent-primary: light-dark(#c4461c, #ff8a5c) !important;
+    --color-accent-primary-hover: light-dark(#a93b16, #ffa07a) !important;
+    --color-accent-primary-active: light-dark(#8f3212, #ffb899) !important;
+    --focus-outline-color: light-dark(#c4461c, #ff8a5c) !important;
+  }
+
+  /* Cut Browser's defaults are its own, not an organisation's policy, and
+   * Firefox's help site is for Firefox. */
+  #policies-container,
+  #policies-container-content,
+  #helpButton,
+  #need-help {
+    display: none !important;
+  }
+
+  .cut-pane-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-block: 8px 4px;
+  }
+
+  .cut-status {
+    margin-block: 12px 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: light-dark(rgb(0 0 0 / 0.04), rgb(255 255 255 / 0.06));
+
+    &[data-state="running"],
+    &[data-state="remote"] {
+      border-inline-start: 3px solid light-dark(#17803a, #5cc27a);
+    }
+
+    &[data-state="failed"] {
+      border-inline-start: 3px solid light-dark(#c42b2b, #f07474);
+    }
+  }
+
+  .cut-actions {
+    margin-block: 4px 16px;
+    gap: 8px;
+  }
+
+  .cut-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-block-start: 16px;
+
+    & > input {
+      max-width: 420px;
+    }
+  }
+
+  .cut-facts {
+    margin-block: 8px 12px;
+    padding-inline-start: 20px;
+    line-height: 1.7;
+  }
+}

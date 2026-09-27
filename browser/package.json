@@ -1,0 +1,20 @@
+{
+  "name": "cut-browser",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cut Browser: a private browser built on Firefox, with Cut Search built in",
+  "scripts": {
+    "fetch": "node build.mjs --fetch-only",
+    "build": "node build.mjs",
+    "build:win": "node build.mjs --target win",
+    "build:linux": "node build.mjs --target linux"
+  },
+  "engines": {
+    "node": ">=22.19"
+  },
+  "license": "MPL-2.0",
+  "devDependencies": {
+    "resedit": "^3.1.0"
+  }
+}

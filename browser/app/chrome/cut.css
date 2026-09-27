@@ -1,0 +1,365 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Cut Browser's interface: one calm frame around the page, vertical tabs,
+ * and the web page as a rounded card. Firefox's design tokens are
+ * overridden rather than its rules, so its own layout logic (sidebar
+ * expand-on-hover, split view, fullscreen, customize mode) keeps working. */
+
+/* ---------- Palette ---------- */
+
+:root {
+  --cut-accent: #e0552b;
+  --cut-frame: light-dark(#e9e9eb, #151517);
+  --cut-text: light-dark(#1d1d1f, #ececef);
+  --cut-text-2: light-dark(#5d5d63, #a5a5ad);
+  --cut-hover: light-dark(rgb(0 0 0 / 0.055), rgb(255 255 255 / 0.065));
+  --cut-press: light-dark(rgb(0 0 0 / 0.09), rgb(255 255 255 / 0.1));
+  --cut-selected: light-dark(#ffffff, rgb(255 255 255 / 0.11));
+  --cut-selected-shadow: light-dark(0 1px 2px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(255 255 255 / 0.04));
+  --cut-field: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.065));
+  --cut-field-focus: light-dark(#ffffff, #202024);
+  --cut-card-edge: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.07));
+  --cut-card-shadow: light-dark(0 1px 3px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.5));
+  --cut-separator: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.08));
+  --cut-radius: 10px;
+  --cut-radius-small: 8px;
+  --cut-gap: 8px;
+  --cut-toolbar-height: 44px;
+  --cut-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---------- Firefox's tokens, in Cut's colors ---------- */
+
+:root:root:root {
+  --toolbox-background-color: var(--cut-frame);
+  --toolbox-background-color-inactive: var(--cut-frame);
+  --toolbox-text-color: var(--cut-text);
+  --toolbox-text-color-inactive: var(--cut-text);
+  --toolbar-background-color: var(--cut-frame);
+  --toolbar-text-color: var(--cut-text);
+  --toolbar-field-background-color: var(--cut-field);
+  --toolbar-field-background-color-focus: var(--cut-field-focus);
+  --toolbar-field-border-color: transparent;
+  --toolbar-field-border-color-focus: color-mix(in srgb, var(--cut-accent) 60%, transparent);
+  --toolbar-field-text-color: var(--cut-text);
+  --toolbar-field-text-color-focus: var(--cut-text);
+  --toolbarbutton-border-radius: var(--cut-radius-small);
+  --toolbarbutton-hover-background: var(--cut-hover);
+  --toolbarbutton-active-background: var(--cut-press);
+  --tab-border-radius: var(--cut-radius-small);
+  --tab-background-color-hover: var(--cut-hover);
+  --tab-background-color-selected: var(--cut-selected);
+  --tab-box-shadow-selected: var(--cut-selected-shadow);
+  --tab-selected-textcolor: var(--cut-text);
+  --tab-loading-fill: var(--cut-accent);
+  --urlbar-border-radius: var(--cut-radius);
+  --chrome-content-separator-color: transparent;
+  --content-area-shadow: none;
+  --sidebar-background-color: light-dark(#ffffff, #1c1c1f);
+  --sidebar-text-color: var(--cut-text);
+  --sidebar-border-color: var(--cut-card-edge);
+  --focus-outline-color: var(--cut-accent);
+  --color-accent-primary: light-dark(#c4461c, #ff8a5c);
+  --color-accent-primary-hover: light-dark(#a93b16, #ffa07a);
+  --color-accent-primary-active: light-dark(#8f3212, #ffb899);
+  --button-text-color-primary: light-dark(#ffffff, #1a0e08);
+}
+
+/* ---------- The frame ---------- */
+
+#navigator-toolbox,
+#browser {
+  background: var(--cut-frame) !important;
+  color: var(--cut-text);
+}
+
+#navigator-toolbox {
+  border-bottom: none !important;
+}
+
+/* With "Show accent color on title bars and window borders" on, Windows draws
+ * the window's border in the accent color and Firefox continues it along the
+ * top of the toolbar. The toolbar doesn't span the window here, so the line
+ * runs along the top of the window instead. */
+@media (-moz-windows-accent-color-in-titlebar) {
+  :root[customtitlebar][sizemode="normal"] {
+    #navigator-toolbox {
+      border-top: none !important;
+    }
+
+    body {
+      border-top: 0.5px solid ActiveBorder;
+
+      &:-moz-window-inactive {
+        border-top-color: InactiveBorder;
+      }
+    }
+  }
+}
+
+#nav-bar,
+#PersonalToolbar {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+#nav-bar {
+  min-height: var(--cut-toolbar-height);
+  padding-block: 3px;
+}
+
+/* The web page is a card in the frame. */
+#tabbrowser-tabbox {
+  margin-block-end: var(--cut-gap) !important;
+  margin-inline-end: var(--cut-gap) !important;
+  border-radius: var(--cut-radius);
+  overflow: clip;
+  box-shadow:
+    0 0 0 1px var(--cut-card-edge),
+    var(--cut-card-shadow) !important;
+  outline: none !important;
+}
+
+#tabbrowser-tabpanels {
+  background: var(--cut-frame);
+}
+
+#tabbrowser-tabpanels,
+.browserContainer,
+.browserStack {
+  border-radius: var(--cut-radius);
+}
+
+/* A panel sidebar (bookmarks, history) is a card of its own. */
+#sidebar-box {
+  margin-block-end: var(--cut-gap);
+}
+
+#sidebar {
+  border-radius: var(--cut-radius) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px var(--cut-card-edge) !important;
+}
+
+/* ---------- Sidebar and tabs ---------- */
+
+#sidebar-container,
+sidebar-main {
+  background: transparent !important;
+}
+
+sidebar-main {
+  --button-background-color-ghost-hover: var(--cut-hover);
+  --button-background-color-ghost-active: var(--cut-press);
+  --button-border-radius: var(--cut-radius-small);
+}
+
+#tabbrowser-tabs[orient="vertical"] {
+  --tab-min-height: 36px;
+  --tab-vertical-block-margin: 1px;
+  --tab-inline-padding: 10px;
+
+  .tabbrowser-tab {
+    font-size: 13px;
+  }
+
+  .tab-background {
+    border-radius: var(--cut-radius-small) !important;
+    transition: background-color 120ms var(--cut-ease);
+  }
+
+  .tabbrowser-tab:not([selected], [multiselected]) .tab-label {
+    color: var(--cut-text-2);
+  }
+
+  .tabbrowser-tab:hover .tab-label {
+    color: var(--cut-text);
+  }
+
+  /* The close button appears where it's useful: on hover and the current tab. */
+  .tabbrowser-tab:not(:hover, [selected]) .tab-close-button {
+    opacity: 0;
+  }
+
+  .tab-close-button {
+    border-radius: 6px;
+    transition: opacity 120ms var(--cut-ease);
+  }
+}
+
+/* Pinned tabs as tiles, like Zen's essentials. */
+#pinned-tabs-container[orient="vertical"] {
+  gap: 6px;
+  padding-block: 2px 6px;
+
+  .tabbrowser-tab[pinned] .tab-background {
+    background-color: var(--cut-hover);
+    border-radius: var(--cut-radius) !important;
+  }
+
+  .tabbrowser-tab[pinned][selected] .tab-background {
+    background-color: var(--cut-selected);
+    box-shadow: var(--cut-selected-shadow);
+  }
+}
+
+#vertical-pinned-tabs-splitter {
+  border-top: 1px solid var(--cut-separator) !important;
+  margin-inline: 12px !important;
+  background: none !important;
+}
+
+#vertical-tabs-newtab-button {
+  border-radius: var(--cut-radius-small);
+  color: var(--cut-text-2);
+
+  &:hover {
+    color: var(--cut-text);
+  }
+}
+
+/* ---------- Toolbar and address bar ---------- */
+
+#nav-bar toolbarbutton .toolbarbutton-icon,
+#nav-bar toolbarbutton .toolbarbutton-badge-stack {
+  border-radius: var(--cut-radius-small) !important;
+}
+
+#urlbar-container {
+  --urlbar-container-height: 36px !important;
+}
+
+#urlbar:not([breakout-extend]) .urlbar-background {
+  border-radius: var(--cut-radius) !important;
+}
+
+#urlbar[focused]:not([breakout-extend]) .urlbar-background {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cut-accent) 45%, transparent) !important;
+}
+
+/* Floating address bar: while you type, the address bar opens as a
+ * palette in the middle of the window over a dimmed page. */
+:root[cut-floating-urlbar] #urlbar[breakout][breakout-extend]:popover-open {
+  position: fixed !important;
+  inset-inline-start: 50% !important;
+  top: 16vh !important;
+  width: min(760px, calc(100vw - 48px)) !important;
+  translate: -50% 0 !important;
+  margin: 0 !important;
+
+  .urlbar-background {
+    border-radius: 14px !important;
+    box-shadow:
+      0 0 0 1px var(--cut-card-edge),
+      0 24px 64px rgb(0 0 0 / 0.35) !important;
+  }
+}
+
+:root[cut-floating-urlbar][cut-urlbar-open] #tabbrowser-tabbox::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.28);
+  border-radius: var(--cut-radius);
+  pointer-events: none;
+  animation: cut-fade-in 140ms var(--cut-ease);
+}
+
+#tabbrowser-tabbox {
+  position: relative;
+}
+
+@keyframes cut-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Layout: the sidebar runs the full height of the window and
+ * the toolbar sits above the page only (cut-window.js measures both). ---------- */
+
+:root[cut-split-layout]:not([inFullscreen], [customizing], [cut-compact]) {
+  #navigator-toolbox {
+    margin-inline-start: var(--cut-sidebar-width, 0px);
+  }
+
+  #sidebar-container {
+    margin-block-start: calc(-1 * var(--cut-toolbox-height, 0px));
+    padding-block-start: 6px;
+    z-index: 1;
+  }
+
+  /* The top of the sidebar, beside the toolbar, moves the window. */
+  #sidebar-container::before {
+    content: "";
+    display: block;
+    position: absolute;
+    inset: 0 0 auto;
+    height: var(--cut-toolbox-height, 0px);
+    -moz-window-dragging: drag;
+    z-index: -1;
+  }
+}
+
+/* ---------- Compact mode: sidebar and toolbar tuck away and slide in when
+ * you point at the window's edge. ---------- */
+
+:root[cut-compact]:not([inFullscreen], [customizing]) {
+  #navigator-toolbox {
+    position: fixed !important;
+    inset: 0 0 auto 0;
+    z-index: 20;
+    transform: translateY(calc(-100% - 2px));
+    transition: transform 220ms var(--cut-ease);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+    border-radius: 0 0 var(--cut-radius) var(--cut-radius);
+  }
+
+  &[cut-toolbar-peek] #navigator-toolbox,
+  #navigator-toolbox:focus-within {
+    transform: none;
+  }
+
+  /* The address bar is drawn in the top layer, outside the toolbar, so it
+   * has to be moved with it (Firefox does the same in fullscreen). */
+  &:not([cut-toolbar-peek]):not(:has(#navigator-toolbox:focus-within)) {
+    --toolbar-shift-translate: 0 calc(-1 * var(--cut-toolbox-height, 48px) - 8px);
+  }
+
+  #urlbar[breakout]:popover-open {
+    transition: translate 220ms var(--cut-ease);
+  }
+
+  #sidebar-container {
+    position: fixed !important;
+    inset: 0 auto 0 0;
+    z-index: 21;
+    padding: 6px 0 6px 0;
+    background: var(--cut-frame) !important;
+    border-radius: 0 var(--cut-radius) var(--cut-radius) 0;
+    box-shadow: 0 0 0 1px var(--cut-card-edge), 8px 0 32px rgb(0 0 0 / 0.3);
+    transform: translateX(calc(-100% - 2px));
+    transition: transform 220ms var(--cut-ease);
+  }
+
+  &[cut-sidebar-peek] #sidebar-container {
+    transform: none;
+  }
+
+  #tabbrowser-tabbox {
+    margin: var(--cut-gap) !important;
+  }
+}
+
+/* ---------- Cut's toolbar button ---------- */
+
+#cut-compact-button {
+  list-style-image: url("chrome://browser/content/cut/icons/compact.svg");
+}
+
+:root[cut-compact] #cut-compact-button {
+  --toolbarbutton-icon-fill: var(--cut-accent);
+}
