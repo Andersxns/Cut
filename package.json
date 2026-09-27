@@ -1,0 +1,22 @@
+{
+  "name": "cut-search",
+  "version": "1.0.0",
+  "description": "Cut: a private metasearch engine for the web, media and torrents. No tracking, no profiling.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch-path=src --watch-path=server.js server.js --dev",
+    "test": "node --test test/*.test.js",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "engines": {
+    "node": ">=22.19"
+  },
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "undici": "^8.11.2"
+  }
+}

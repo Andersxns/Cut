@@ -1,0 +1,9 @@
+# Keep line endings LF everywhere, so scripts and packages built on Windows
+# behave the same as on Linux.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.exe binary

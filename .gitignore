@@ -1,0 +1,13 @@
+node_modules/
+npm-debug.log*
+*.log
+.DS_Store
+Thumbs.db
+
+# Cut Search: connection settings saved at runtime
+data/
+
+# Cut Browser: downloads, build folders and packages
+browser/.cache/
+browser/.build*/
+browser/dist/
