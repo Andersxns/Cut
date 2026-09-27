@@ -1,0 +1,170 @@
+name: Build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  check:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Check the tag matches Cut Browser's version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(node -p "require('./browser/package.json').version")
+          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in browser/package.json"
+            exit 1
+          fi
+      - name: Test Cut Search
+        run: npm test
+      - name: Check Cut Browser's build scripts
+        run: for f in browser/build.mjs browser/lib/*.mjs browser/tools/*.mjs; do node --check "$f"; done
+
+  package:
+    name: Cut Browser (${{ matrix.name }})
+    needs: check
+    # packages are built for version tags, manual runs and the default branch
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # the installer is compiled with the C# compiler that comes with Windows
+          - name: Windows
+            os: windows-latest
+            target: win
+          - name: Linux
+            os: ubuntu-latest
+            target: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            browser/package-lock.json
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix browser
+      - name: Build (downloads the newest Firefox release and Node 24 LTS, checking their checksums)
+        run: node browser/build.mjs --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cut-browser-${{ matrix.name }}
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            browser/dist/*.exe
+            browser/dist/*.deb
+            browser/dist/*.tar.xz
+
+  sign:
+    name: Sign the Windows installer
+    needs: package
+    # releases only, once SignPath is set up (see "Setting up code signing" in CONTRIBUTING.md);
+    # every signing request is approved by hand in SignPath
+    if: startsWith(github.ref, 'refs/tags/v') && vars.SIGNPATH_ORGANIZATION_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 250
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Find the unsigned installer
+        id: unsigned
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[] | select(.name == "cut-browser-Windows") | .id')
+          test -n "$id"
+          echo "artifact-id=$id" >> "$GITHUB_OUTPUT"
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Sign with SignPath (waits for the request to be approved)
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'cut' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 14400
+          output-artifact-directory: signed
+          parameters: |
+            version: ${{ toJSON(steps.unsigned.outputs.version) }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cut-browser-Windows-signed
+          path: signed/*.exe
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: [package, sign]
+    # after signing, or with an unsigned Windows installer while SignPath isn't set up
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') && needs.package.result == 'success' && (needs.sign.result == 'success' || needs.sign.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: docs/releases
+      - uses: actions/download-artifact@v4
+        with:
+          name: cut-browser-Linux
+          path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.sign.result == 'success' && 'cut-browser-Windows-signed' || 'cut-browser-Windows' }}
+          path: artifacts
+      - name: Checksums
+        run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Release name and notes
+        id: notes
+        env:
+          SIGNED: ${{ needs.sign.result == 'success' }}
+        run: |
+          echo "name=Cut Browser ${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          # the Firefox version is part of the .deb's name (cut-browser_1.0.0+firefox156.0.1_amd64.deb)
+          firefox=$(ls artifacts/*.deb | sed -E 's/.*\+firefox([0-9.]+)_amd64\.deb$/\1/')
+          if [ "$SIGNED" = true ]; then
+            signing='The Windows installer is code-signed: free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).'
+          else
+            signing="The Windows installer in this release isn't code-signed, so SmartScreen may warn you the first time: choose **More info → Run anyway**."
+          fi
+          # a version's own notes (docs/releases/<tag>.md) go above the generated list of changes;
+          # "<!-- signing -->" and "<!-- firefox -->" are filled in here
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          [ -f "$notes" ] || printf '<!-- signing -->\n\nBuilt on Firefox <!-- firefox -->.\n' > "$notes"
+          sed -e "s|<!-- signing -->|$signing|" -e "s|<!-- firefox -->|$firefox|" "$notes" > release-notes.md
+          echo "path=release-notes.md" >> "$GITHUB_OUTPUT"
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.notes.outputs.name }}
+          body_path: ${{ steps.notes.outputs.path }}
+          files: artifacts/*
+          generate_release_notes: true

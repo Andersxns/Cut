@@ -1,0 +1,34 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where?
+      options: [Cut Browser, Cut Search, Installer or Linux package]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Cut Browser shows it in Menu → Help → About Cut.
+      placeholder: Cut Browser 1.0.0 · Firefox 156.0.1
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 / Ubuntu 24.04 …
+  - type: textarea
+    id: search
+    attributes:
+      label: Search
+      description: For wrong or missing search results, the search you made (only if you're happy to share it) and which tab (All, Images, Torrents…).
