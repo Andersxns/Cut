@@ -96,10 +96,15 @@ export function dropOutliers(outcomes, query) {
   return outcomes.map((o) => (outliers.has(o) ? { ...o, ok: false, error: 'offtopic', results: [] } : o));
 }
 
-export async function searchWeb(ctx) {
-  const engines = WEB_ENGINES.filter(
-    (e) => ctx.prefs.engines.includes(e.id) && (ctx.page === 1 || e.paging) && (!ctx.time || e.supportsTime),
+// The engines a search asks: the ones you turned on (and gave a key, if they
+// need one) that can answer this page and time filter.
+export const webEnginesFor = (ctx) =>
+  WEB_ENGINES.filter(
+    (e) => ctx.prefs.engines.includes(e.id) && (!e.keyPref || ctx.prefs[e.keyPref]) && (ctx.page === 1 || e.paging) && (!ctx.time || e.supportsTime),
   );
+
+export async function searchWeb(ctx) {
+  const engines = webEnginesFor(ctx);
   const { outcomes, ms } = await runEngines(
     'web',
     engines,
@@ -109,6 +114,7 @@ export async function searchWeb(ctx) {
       region: ctx.region,
       safe: ctx.safe,
       time: ctx.time,
+      keys: Object.fromEntries(engines.filter((e) => e.keyPref).map((e) => [e.id, ctx.prefs[e.keyPref]])),
     },
     { validate: (results) => offTopic(results, ctx.query) },
   );

@@ -8,6 +8,7 @@ import { SORTS } from '../search/torrents.js';
 import { IMAGE_FILTERS } from '../engines/media/images.js';
 import { VIDEO_FILTERS } from '../engines/media/videos.js';
 import { engineName, sourceShort } from '../engines/registry.js';
+import { describeError } from '../http.js';
 import { imageSrc } from '../proxy.js';
 import { breadcrumb, hostname, urlKey } from '../util/url.js';
 import { highlight, formatBytes, timeAgo, formatNumber, formatCompact, formatDate, truncate, tokenize } from '../util/text.js';
@@ -169,10 +170,20 @@ function related(ctx, phrases) {
   </section>`;
 }
 
+// Says so when an engine you gave an API key to turns the key down or has
+// run out of searches, instead of leaving it out silently.
+function keyNotice(ctx, data) {
+  const engine = ctx.page === 1 && data.sources?.find((s) => s.error === 'key' || s.error === 'quota');
+  if (!engine) return '';
+  return html`<p class="notice notice--warn">${engine.name} ${describeError(engine.error)}${
+    engine.error === 'key' ? html`. <a href="/settings#engines">Check it in Settings</a>.` : ', so your other engines answered this search.'
+  }</p>`;
+}
+
 function webContent(ctx, data) {
   const answer = data.answer ? answerCard(data.answer) : '';
-  if (!data.results.length) return html`${answer}${emptyState(ctx, data)}`;
-  return html`${answer}
+  if (!data.results.length) return html`${keyNotice(ctx, data)}${answer}${emptyState(ctx, data)}`;
+  return html`${keyNotice(ctx, data)}${answer}
     <ol class="results" data-results>${data.results.map((r) => webResult(r, ctx))}</ol>
     ${moreButton(ctx, data.hasMore)}
     ${data.related?.length ? related(ctx, data.related) : ''}`;

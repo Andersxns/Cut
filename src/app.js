@@ -5,7 +5,7 @@ import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import { config } from './config.js';
-import { readPrefs, mergePrefs, serializePrefs, getRegion, REGIONS, SAFE_LEVELS, DEFAULT_PREFS, COOKIE_NAME, features, cookieMaxAge, exportCode, importCode } from './prefs.js';
+import { readPrefs, mergePrefs, serializePrefs, getRegion, REGIONS, SAFE_LEVELS, DEFAULT_PREFS, COOKIE_NAME, features, cookieMaxAge, exportCode, importCode, keepSecrets } from './prefs.js';
 import { getNetworkSettings, validateNetwork, saveNetworkSettings, canManageNetwork, describeNetwork, networkFixed } from './net/settings.js';
 import { testConnection } from './net/dispatcher.js';
 import { runWithContext } from './net/context.js';
@@ -456,7 +456,7 @@ function setPrefsCookie(req, res, prefs) {
   res.setHeader('Set-Cookie', `${COOKIE_NAME}=${value}; Path=/;${maxAge ? ` Max-Age=${maxAge};` : ''} SameSite=Lax; HttpOnly${secure}`);
 }
 
-const cookieText = (prefs) => decodeURIComponent(serializePrefs(prefs)).split('&').filter(Boolean).join('\n');
+const cookieText = (prefs) => decodeURIComponent(serializePrefs(prefs, { secrets: 'mask' })).split('&').filter(Boolean).join('\n');
 const safeReturn = (value) => (typeof value === 'string' && /^\/(?![/\\])[^\s]*$/.test(value) ? value : '');
 const wantsJson = (req) => String(req.headers.accept || '').includes('application/json');
 
@@ -510,7 +510,7 @@ async function handleSettings(req, res, url, pathname) {
   const current = readPrefs(req.headers.cookie, WEB_ENGINE_IDS, TORRENT_SOURCE_IDS);
 
   if (pathname === '/settings') {
-    const next = form.get('reset') === '1' ? structuredClone(DEFAULT_PREFS) : mergePrefs(current, form, WEB_ENGINE_IDS, TORRENT_SOURCE_IDS);
+    const next = form.get('reset') === '1' ? keepSecrets(structuredClone(DEFAULT_PREFS), current) : mergePrefs(current, form, WEB_ENGINE_IDS, TORRENT_SOURCE_IDS);
     setPrefsCookie(req, res, next);
     if (wantsJson(req)) return sendJson(req, res, 200, { ok: true, theme: next.theme, cookie: cookieText(next), code: exportCode(next) });
     return redirect(res, safeReturn(form.get('return')) || '/settings?saved=1', 303);
@@ -518,7 +518,7 @@ async function handleSettings(req, res, url, pathname) {
   if (pathname === '/settings/import') {
     const imported = importCode(form.get('code'), WEB_ENGINE_IDS, TORRENT_SOURCE_IDS);
     if (!imported) return redirect(res, '/settings?import=invalid#data', 303);
-    setPrefsCookie(req, res, imported);
+    setPrefsCookie(req, res, keepSecrets(imported, current));
     return redirect(res, '/settings?import=ok#data', 303);
   }
   if (pathname === '/settings/clear') {

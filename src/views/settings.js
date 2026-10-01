@@ -46,6 +46,22 @@ const group = (title, content, { id = '', desc = '' } = {}) => html`<div class="
 
 const pane = (id, title, content) => html`<section class="pane" id="${id}" data-pane><h2 class="pane__title">${title}</h2>${content}</section>`;
 
+// The API key for an engine used through its own API, shown while the engine
+// is on. Brave is the only one so far.
+const KEY_HELP = {
+  brave: html`Make one with <a href="https://brave.com/search/api/" rel="noopener noreferrer" target="_blank">Brave’s Search API</a>; the credit its plans include each month covers about 1,000 searches. Brave sees your searches with your key, so it can link them to your Brave account. The key stays in Cut’s cookie on this device and is never put in settings codes.`,
+};
+
+function keyField(engine, p) {
+  return html`<div class="subrows" data-engine-key data-row>
+    <div class="row row--area">
+      <label class="row__label" for="f-key-${engine.id}">${engine.name} API key</label>
+      <input id="f-key-${engine.id}" type="password" name="${engine.keyPref}" value="${p[engine.keyPref]}" placeholder="Paste your key" autocomplete="off" spellcheck="false">
+      ${KEY_HELP[engine.id] ? html`<span class="row__desc">${KEY_HELP[engine.id]}</span>` : ''}
+    </div>
+  </div>`;
+}
+
 // ---------- Panes ----------
 
 function generalPane(p) {
@@ -94,8 +110,8 @@ function searchPane(p) {
     )}
     ${group(
       'Search engines',
-      html`${WEB_ENGINES.map((e) => html`<label class="row row--check" data-row><input type="checkbox" name="engines" value="${e.id}"${checked(p.engines.includes(e.id))}><span class="row__text"><span class="row__label">${e.name}</span><span class="row__desc">${e.description}</span></span></label>`)}`,
-      { desc: 'Cut asks every enabled engine at the same time and merges the results.' },
+      html`${WEB_ENGINES.map((e) => html`<label class="row row--check" data-row><input type="checkbox" name="engines" value="${e.id}"${checked(p.engines.includes(e.id))}><span class="row__text"><span class="row__label">${e.name}</span><span class="row__desc">${e.description}</span></span></label>${e.keyPref ? keyField(e, p) : ''}`)}`,
+      { id: 'engines', desc: 'Cut asks every enabled engine at the same time and merges the results.' },
     )}
     ${group(
       'Site preferences',

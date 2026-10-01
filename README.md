@@ -108,11 +108,13 @@ Profiles live in `%APPDATA%\Cut` on Windows and `~/.cut` on Linux, separate from
 
 | Tab | Sources | Notes |
 | --- | --- | --- |
-| **All** (web) | DuckDuckGo, Bing, Wikipedia, Marginalia · optional Mwmbl, Wiby | Queried in parallel, merged by weighted reciprocal-rank fusion. Pages several engines agree on rise, and so do pages that mention more of your search; duplicates fold together. An engine that answers for only one word of a longer search is left out. |
+| **All** (web) | DuckDuckGo, Bing, Wikipedia, Marginalia · optional Mwmbl, Wiby, Brave Search (with your own API key) | Queried in parallel, merged by weighted reciprocal-rank fusion. Pages several engines agree on rise, and so do pages that mention more of your search; duplicates fold together. An engine that answers for only one word of a longer search is left out. |
 | **Images** | DuckDuckGo → Bing fallback | Justified grid, lightbox, filters for size, color, type, layout and license. |
 | **Videos** | DuckDuckGo → YouTube fallback | Links straight to the host; players are never embedded. |
 | **News** | DuckDuckGo + Bing News | Blended and de-duplicated; sort by relevance or newest. |
 | **Torrents** | The Pirate Bay, Nyaa, Torrents-CSV, Knaben, Internet Archive · optional BT4G | Merged by info hash, relevance-filtered, with seed health, category filters, sorting, magnet links and `.torrent` files where available. |
+
+**Brave Search** has an index of its own, and Cut Search can ask it through its official API with a key of yours: make one at [Brave's Search API](https://brave.com/search/api/), then tick *Brave Search* in *Settings → Search engines* and paste the key. Brave's plans include $5 of credit a month, about 1,000 searches; it asks for a card to confirm who you are, but doesn't charge for the included credit. Brave sees your searches with your key, so it can link them to your Brave account. The key stays in Cut Search's cookie on your device and is never put in settings codes.
 
 <img src="docs/screenshots/search-torrents.png" alt="Cut Search torrent results for Big Buck Bunny" width="820">
 
@@ -151,8 +153,8 @@ browsers without JavaScript).
   infinite scroll and keyboard shortcuts.
 - **Search**: region and safe search; suggestions (DuckDuckGo, bangs only, or
   off); instant answers, the knowledge panel, related searches, bold query
-  words and site icons; which web engines to ask; sites to **block** from
-  results or **boost** to the top.
+  words and site icons; which web engines to ask (and your Brave Search API
+  key); sites to **block** from results or **boost** to the top.
 - **Privacy & Security**
   - *Enhanced Tracking Protection*: Standard, Strict or Custom, as in Firefox.
     Standard unwraps redirect links (Google, Bing, DuckDuckGo, Facebook,
@@ -235,6 +237,8 @@ shows results from whichever engines answer.
   `data/network.json`, when whoever runs it saves connection settings.
 - **No identifiers.** The only cookie holds the settings you choose (theme,
   region, engines…). Two people with the same settings send identical cookies.
+  The one exception is a Brave Search API key, if you add one: Brave sees it
+  with your searches.
 - **Engines never see your browser.** Cut Search's server talks to every
   upstream engine, without cookies. Autocomplete, favicons and every thumbnail
   are proxied too, so the sites in your results don't see your IP address

@@ -78,7 +78,7 @@ Before opening a pull request, run `npm test`. The [Build workflow](.github/work
 
 ## Adding things
 
-- **A web engine or torrent source:** add an object with an `id`, a `name`, a `description`, a `timeout` and an `async search(params)` that returns results to a module in `src/engines/web/` or `src/engines/torrents/` (web engines also have a ranking `weight`), and list it in `src/engines/registry.js`.
+- **A web engine or torrent source:** add an object with an `id`, a `name`, a `description`, a `timeout` and an `async search(params)` that returns results to a module in `src/engines/web/` or `src/engines/torrents/` (web engines also have a ranking `weight`), and list it in `src/engines/registry.js`. An engine that needs an API key, like Brave Search, names the setting that holds it in `keyPref`; that setting is a `secret` entry in `src/prefs.js`, so it never goes into settings codes.
 - **A !bang:** add a line to `BANG_TABLE` in `src/bangs.js`.
 - **An instant answer:** add a matcher in `src/answers/` and include it in `src/answers/index.js`.
 - **A browser default:** add a `pref()` line to `browser/app/prefs/cut.js`, with a comment when the reason isn't obvious.

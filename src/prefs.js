@@ -122,6 +122,8 @@ export const SCHEMA = {
   bold: bool('hl', true),
   favicons: bool('fi', true),
   engines: { key: 'we', type: 'ids', default: DEFAULT_WEB_ENGINES },
+  // API keys for engines that need one. Secret: never put in settings codes.
+  braveKey: { key: 'bk', type: 'key', default: '', secret: true },
   blockSites: { key: 'bs', type: 'domains', default: [] },
   boostSites: { key: 'bo', type: 'domains', default: [] },
   // Privacy & security
@@ -201,6 +203,10 @@ function parseValue(spec, value, allowed) {
       return parseDomains(value);
     case 'origin':
       return value === '' ? '' : parseOrigin(value) || undefined;
+    case 'key': {
+      const key = String(value).trim();
+      return key === '' || /^[A-Za-z0-9_-]{8,128}$/.test(key) ? key : undefined;
+    }
     default:
       return undefined;
   }
@@ -249,18 +255,30 @@ export function readPrefs(cookieHeader, knownEngines, knownSources) {
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// Only values that differ from the defaults are written.
-export function serializePrefs(prefs) {
+// Only values that differ from the defaults are written. Secrets (API keys)
+// are written as they are for the cookie, left out of settings codes
+// (`secrets: 'omit'`) and shown only by their end (`secrets: 'mask'`).
+export function serializePrefs(prefs, { secrets = 'keep' } = {}) {
   const params = new URLSearchParams();
   for (const [name, spec] of Object.entries(SCHEMA)) {
     const value = prefs[name];
     if (value === undefined || same(value, spec.default)) continue;
+    if (spec.secret && secrets === 'omit') continue;
     if (spec.type === 'bool') params.set(spec.key, value ? '1' : '0');
     else if (spec.type === 'ids') params.set(spec.key, value.join('.'));
     else if (spec.type === 'domains') params.set(spec.key, value.join(','));
+    else if (spec.secret && secrets === 'mask') params.set(spec.key, `****${String(value).slice(-4)}`);
     else params.set(spec.key, String(value));
   }
   return encodeURIComponent(params.toString());
+}
+
+// Settings codes and "Reset to defaults" leave your API keys as they are.
+export function keepSecrets(prefs, current) {
+  for (const [name, spec] of Object.entries(SCHEMA)) {
+    if (spec.secret) prefs[name] = current[name];
+  }
+  return prefs;
 }
 
 // Applies submitted form fields on top of existing prefs. A full settings form
@@ -285,7 +303,8 @@ export function mergePrefs(current, form, knownEngines, knownSources) {
 }
 
 // Portable settings code: move settings between browsers without an account.
-export const exportCode = (prefs) => 'cut1.' + Buffer.from(decodeURIComponent(serializePrefs(prefs))).toString('base64url');
+// It never holds your API keys, so a code can be shared safely.
+export const exportCode = (prefs) => 'cut1.' + Buffer.from(decodeURIComponent(serializePrefs(prefs, { secrets: 'omit' }))).toString('base64url');
 
 export function importCode(code, knownEngines, knownSources) {
   const match = String(code || '').trim().match(/^cut1\.([A-Za-z0-9_-]*)$/);

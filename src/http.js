@@ -63,7 +63,7 @@ export async function fetchUpstream(url, { method = 'GET', headers, body, timeou
   }
 }
 
-function toUpstreamError(err) {
+export function toUpstreamError(err) {
   if (err instanceof UpstreamError) return err;
   if (err?.name === 'TimeoutError' || err?.name === 'AbortError') return new UpstreamError('timed out', { code: 'timeout' });
   const cause = err?.cause;
@@ -83,4 +83,6 @@ export const describeError = (code) =>
     network: 'unreachable',
     proxy: 'couldn’t be reached through the proxy',
     http: 'returned an error',
+    key: 'didn’t accept your API key',
+    quota: 'has no searches left on your plan',
   })[code] || 'failed';

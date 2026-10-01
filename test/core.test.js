@@ -9,12 +9,13 @@ import { convertUnits } from '../src/answers/units.js';
 import { matchCurrency } from '../src/answers/currency.js';
 import { resolveBang, suggestBangs } from '../src/bangs.js';
 import { normalizeHash, buildMagnet, guessCategory, hashFromMagnet } from '../src/engines/torrents/common.js';
-import { mergeWeb, offTopic, dropOutliers } from '../src/search/web.js';
+import { mergeWeb, offTopic, dropOutliers, webEnginesFor } from '../src/search/web.js';
+import brave, { braveParams, parseBrave, braveError } from '../src/engines/web/brave.js';
 import { runEngines } from '../src/search/run.js';
 import { mergeTorrents, rankTorrents } from '../src/search/torrents.js';
 import { decodeBingUrl } from '../src/engines/web/bing.js';
 import { unwrapDdgUrl, isDdgAd } from '../src/engines/ddg-common.js';
-import { readPrefs, serializePrefs, mergePrefs, DEFAULT_PREFS, COOKIE_NAME } from '../src/prefs.js';
+import { readPrefs, serializePrefs, mergePrefs, DEFAULT_PREFS, COOKIE_NAME, getRegion, exportCode, importCode, keepSecrets } from '../src/prefs.js';
 
 test('html templates escape interpolations unless marked safe', () => {
   const evil = '<script>alert("x")</script>';
@@ -247,4 +248,57 @@ test('preferences round-trip through the cookie and ignore junk', () => {
   const merged = mergePrefs(DEFAULT_PREFS, new URLSearchParams('theme=dark'), engines, sources);
   assert.equal(merged.theme, 'dark');
   assert.deepEqual(merged.engines, DEFAULT_PREFS.engines);
+});
+
+test('Brave Search: its requests, its answers and its errors', async () => {
+  const p = { query: 'overtime in rocket league', page: 2, safe: 'strict', time: 'w', region: getRegion('jp-jp') };
+  const params = braveParams(p);
+  assert.equal(params.get('offset'), '1');
+  assert.equal(params.get('country'), 'JP');
+  assert.equal(params.get('search_lang'), 'jp', 'Brave calls Japanese "jp"');
+  assert.equal(params.get('safesearch'), 'strict');
+  assert.equal(params.get('freshness'), 'pw');
+  const everywhere = braveParams({ ...p, page: 1, time: '', region: getRegion('wt-wt') });
+  assert.equal(everywhere.get('country'), 'ALL');
+  assert.equal(everywhere.has('search_lang'), false);
+  assert.equal(everywhere.has('freshness'), false);
+  assert.equal(braveParams({ ...p, region: getRegion('gr-el') }).get('country'), 'ALL', 'a country Brave lacks searches everywhere');
+  assert.equal(braveParams({ ...p, region: getRegion('br-pt') }).get('search_lang'), 'pt-br');
+
+  const answer = {
+    web: {
+      results: [
+        { title: 'Overtime &amp; <strong>Rocket</strong> League', url: 'https://example.com/ot', description: 'How <strong>overtime</strong> works', profile: { name: 'Example' } },
+        { title: 'Not a page', url: 'javascript:alert(1)', description: '' },
+      ],
+    },
+  };
+  assert.deepEqual(parseBrave(answer), [{ url: 'https://example.com/ot', title: 'Overtime & Rocket League', snippet: 'How overtime works', siteName: 'Example' }]);
+  assert.deepEqual(parseBrave({}), []);
+  assert.deepEqual(await brave.search({ ...p, keys: {} }), [], 'without a key, Brave isn’t asked');
+  assert.deepEqual(await brave.search({ ...p, page: 11, keys: { brave: 'BSAtestkey123' } }), [], 'Brave has ten pages');
+
+  const error = (status, code) => braveError(new Response(JSON.stringify({ error: { code, detail: 'x', status }, type: 'ErrorResponse' }), { status }));
+  assert.equal((await error(422, 'SUBSCRIPTION_TOKEN_INVALID')).code, 'key');
+  assert.equal((await error(429, 'QUOTA_LIMITED')).code, 'quota');
+  assert.equal((await error(429, 'RATE_LIMITED')).code, 'ratelimit');
+  assert.equal((await error(422, 'VALIDATION')).code, 'http');
+  assert.equal((await braveError(new Response('<html>', { status: 502 }))).code, 'http');
+});
+
+test('an engine that needs an API key runs only with one, and the key stays private', () => {
+  const ids = (prefs) => webEnginesFor({ prefs: { ...DEFAULT_PREFS, ...prefs }, page: 1, time: '' }).map((e) => e.id);
+  assert.ok(!ids({ engines: ['duckduckgo', 'brave'] }).includes('brave'), 'turned on without a key');
+  assert.ok(ids({ engines: ['duckduckgo', 'brave'], braveKey: 'BSAtestkey123' }).includes('brave'));
+  assert.ok(!ids({ braveKey: 'BSAtestkey123' }).includes('brave'), 'a key alone doesn’t turn it on');
+
+  const known = ['duckduckgo', 'brave'];
+  const withKey = mergePrefs(DEFAULT_PREFS, new URLSearchParams('_full=1&engines=duckduckgo&engines=brave&braveKey=+BSAtestkey123+'), known, []);
+  assert.equal(withKey.braveKey, 'BSAtestkey123', 'pasted with spaces around it');
+  assert.equal(readPrefs(`${COOKIE_NAME}=${serializePrefs(withKey)}`, known, []).braveKey, 'BSAtestkey123', 'kept in the cookie');
+  assert.ok(!decodeURIComponent(serializePrefs(withKey, { secrets: 'mask' })).includes('BSAtestkey123'), 'masked where the cookie is shown');
+  assert.equal(importCode(exportCode(withKey), known, []).braveKey, '', 'never in settings codes');
+  assert.equal(keepSecrets(structuredClone(DEFAULT_PREFS), withKey).braveKey, 'BSAtestkey123', 'kept on reset and import');
+  assert.equal(mergePrefs(withKey, new URLSearchParams('braveKey=<script>'), known, []).braveKey, 'BSAtestkey123', 'junk is ignored');
+  assert.equal(mergePrefs(withKey, new URLSearchParams('braveKey='), known, []).braveKey, '', 'an empty field removes it');
 });

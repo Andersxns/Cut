@@ -767,6 +767,10 @@ html[data-density='compact'] .story {
 
 /* ---------- Web results ---------- */
 
+/* A notice above the results, such as an API key an engine turned down. */
+.serp__content > .notice {
+  margin: 0 0 24px;
+}
 .results {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2147,8 +2151,12 @@ fieldset:disabled {
 /* Only show the fields for the chosen connection type / protection level. */
 .netform:not(:has(input[name='mode'][value='manual']:checked)) [data-mode-panel='manual'],
 .netform:not(:has(input[name='mode'][value='tor']:checked)) [data-mode-panel='tor'],
-.group:not(:has(input[name='etp'][value='custom']:checked)) [data-etp-custom] {
+.group:not(:has(input[name='etp'][value='custom']:checked)) [data-etp-custom],
+.row--check:not(:has(input:checked)) + [data-engine-key] {
   display: none;
+}
+[data-engine-key] input {
+  max-width: 420px;
 }
 .prefs__bar {
   position: sticky;
