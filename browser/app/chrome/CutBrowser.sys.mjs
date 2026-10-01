@@ -317,6 +317,7 @@ export const CutBrowser = {
       return;
     }
     this._initialized = true;
+    this._useFirefoxUserAgent();
     Services.obs.addObserver(this, "quit-application");
     this._registerContentStyles();
     // Before Cut Search starts: in a Tor window, it needs Tor's port.
@@ -425,6 +426,24 @@ export const CutBrowser = {
       if (CustomizableUI.getPlacementOfWidget(id)?.area == navbar) {
         CustomizableUI.moveWidgetWithinArea(id, index++);
       }
+    }
+  },
+
+  // Firefox builds its user agent from the app's name, which in Cut Browser
+  // is "Cut" (so that profiles live apart from Firefox's): "... Gecko/20100101
+  // Cut/157.0". Sites that check for known browsers, such as YouTube Music,
+  // turn that away, and it would set Cut Browser's users apart. Sites get
+  // Firefox's own user agent instead, for this version and platform. (Tor
+  // windows resist fingerprinting, which replaces the user agent anyway.)
+  _useFirefoxUserAgent() {
+    if (Services.prefs.prefHasUserValue("general.useragent.override")) {
+      return; // a user agent of your own choosing stays
+    }
+    let ua = Cc["@mozilla.org/network/protocol;1?name=http"].getService(Ci.nsIHttpProtocolHandler).userAgent;
+    let ours = ` ${Services.appinfo.name}/`;
+    let at = ua.lastIndexOf(ours);
+    if (at > 0) {
+      Services.prefs.getDefaultBranch("").setStringPref("general.useragent.override", `${ua.slice(0, at)} Firefox/${ua.slice(at + ours.length)}`);
     }
   },
 

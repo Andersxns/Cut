@@ -183,8 +183,11 @@ such as a Tor window's.
 - Some of the Tor Project's built-in obfs4 bridges are often busy or blocked;
   if a Tor window can't connect through them, try Snowflake or meek, or
   bridges of your own.
-- Streaming sites that use DRM (Netflix and similar) may not play on Windows:
-  the Widevine module is signed for Mozilla's own executables.
+- DRM (Widevine) works, so music and video sites that use it play. Streaming
+  services that also check that the browser itself is signed by Mozilla
+  (Netflix and similar) may refuse to play or lower the quality on Windows:
+  Cut Browser's executable is modified, so Mozilla's signature for it is left
+  out.
 - English (US) only out of the box; other languages install from
   *Settings → Languages*.
 - macOS isn't supported yet.
