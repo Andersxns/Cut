@@ -1,0 +1,10 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<!-- Cut's mark in Tor windows' purple. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <g fill="#8b5cf6" stroke="#8b5cf6" stroke-width="6.4" stroke-linejoin="round">
+    <path d="M34.238 6.836A17.8 17.8 0 0 0 10.036 31.038Z"/>
+    <path d="M39.564 15.362A17.8 17.8 0 0 1 15.362 39.564Z"/>
+  </g>
+</svg>

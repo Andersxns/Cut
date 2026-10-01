@@ -6,9 +6,12 @@
 
 (() => {
   const { CutBrowser } = ChromeUtils.importESModule("resource://cut/CutBrowser.sys.mjs");
+  const { CutTor } = ChromeUtils.importESModule("resource://cut/CutTor.sys.mjs");
   CutBrowser.init();
 
   const root = document.documentElement;
+  // A Tor window (CutTor.sys.mjs) looks different from the start.
+  root.toggleAttribute("cut-tor", CutTor.isTorApp);
   const PREFS = {
     compact: "cut.ui.compact",
     floating: "cut.ui.floatingUrlbar",
@@ -34,6 +37,56 @@
     toggleCompact() {
       Services.prefs.setBoolPref(PREFS.compact, !Services.prefs.getBoolPref(PREFS.compact, false));
     },
+
+    // In a Tor window every window is a Tor window, so a new one is simply
+    // another window here.
+    newTorWindow() {
+      if (CutTor.isTorApp) {
+        OpenBrowserWindow({ private: true });
+      } else {
+        CutTor.open().catch(console.error);
+      }
+    },
+
+    newIdentity() {
+      if (!CutTor.isTorApp) {
+        return;
+      }
+      const ok = Services.prompt.confirm(
+        window,
+        "New identity",
+        "Close every Tor tab and start again with new Tor circuits? Nothing from these tabs is kept."
+      );
+      if (ok) {
+        CutTor.newIdentity();
+      }
+    },
+
+    newTorCircuit() {
+      if (CutTor.isTorApp) {
+        CutTor.newCircuitFor(gBrowser.selectedBrowser);
+      }
+    },
+
+    // The ".onion" button: the page's .onion address, in a Tor window.
+    openOnion() {
+      const onion = CutTor.onionFor(gBrowser.selectedBrowser);
+      if (!onion) {
+        return;
+      }
+      if (CutTor.isTorApp) {
+        openTrustedLinkIn(onion, "current");
+      } else {
+        CutTor.open(onion).catch(console.error);
+      }
+    },
+
+    showTorPanel(anchor) {
+      const panel = document.getElementById("cut-tor-panel");
+      if (panel) {
+        panel.openPopup(anchor, { position: "bottomright topright" });
+      }
+    },
   };
 
   window.addEventListener(
@@ -43,6 +96,7 @@
       setUpCompactMode();
       setUpFloatingUrlbar();
       setUpShortcuts();
+      setUpTorCommands();
     },
     { once: true }
   );
@@ -54,6 +108,10 @@
     }
     Services.obs.removeObserver(onStartup, "browser-delayed-startup-finished");
     CutBrowser.setUpToolbar(window);
+    setUpOnionButton();
+    if (CutTor.isTorApp) {
+      setUpTorStatus();
+    }
   };
   Services.obs.addObserver(onStartup, "browser-delayed-startup-finished");
 
@@ -145,6 +203,145 @@
     }
     const update = () => root.toggleAttribute("cut-urlbar-open", urlbar.hasAttribute("breakout-extend") && urlbar.hasAttribute("open"));
     new MutationObserver(update).observe(urlbar, { attributes: true, attributeFilter: ["breakout-extend", "open"] });
+  }
+
+  // The menu items and Alt+Shift+N for Tor windows (added to browser.xhtml
+  // at build time), and "Open Link in New Tor Window".
+  function setUpTorCommands() {
+    const torApp = CutTor.isTorApp;
+    const available = () => torApp || CutTor.enabled;
+    const syncAvailability = () => {
+      root.toggleAttribute("cut-tor-unavailable", !available());
+      document.getElementById("Cut:NewTorWindow")?.toggleAttribute("disabled", !available());
+    };
+    syncAvailability();
+    Services.prefs.addObserver("cut.tor.enabled", syncAvailability);
+    window.addEventListener("unload", () => Services.prefs.removeObserver("cut.tor.enabled", syncAvailability));
+
+    const on = (id, handler) => document.getElementById(id)?.addEventListener("command", handler);
+    on("Cut:NewTorWindow", () => window.CutUI.newTorWindow());
+    on("Cut:NewIdentity", () => window.CutUI.newIdentity());
+    on("Cut:NewTorCircuit", () => window.CutUI.newTorCircuit());
+
+    // The link item follows Firefox's "Open Link in New Private Window".
+    const privateItem = document.getElementById("context-openlinkprivate");
+    const torItem = document.getElementById("context-openlinkintor");
+    if (!privateItem || !torItem) {
+      return;
+    }
+    const link = () => {
+      const url = window.gContextMenu?.linkURL || "";
+      return /^https?:/i.test(url) ? url : null;
+    };
+    const sync = () => {
+      torItem.hidden = torApp || privateItem.hidden || !CutTor.enabled || !link();
+    };
+    // Firefox sets up the menu in its own popupshowing listener, which runs
+    // before this one; the observer covers the private item changing later.
+    document.getElementById("contentAreaContextMenu")?.addEventListener("popupshowing", e => {
+      if (e.target.id == "contentAreaContextMenu") {
+        sync();
+      }
+    });
+    new MutationObserver(sync).observe(privateItem, { attributes: true, attributeFilter: ["hidden"] });
+    torItem.addEventListener("command", () => {
+      const url = link();
+      if (url) {
+        CutTor.open(url).catch(console.error);
+      }
+    });
+  }
+
+  // ".onion" in the address bar when the page has an .onion address.
+  function setUpOnionButton() {
+    const button = document.getElementById("cut-onion-button");
+    if (!button) {
+      return;
+    }
+    const torApp = CutTor.isTorApp;
+    button.setAttribute("tooltiptext", torApp ? "Go to this site's .onion address" : "This site has an .onion address. Open it in a Tor window");
+    const update = () => {
+      button.hidden = !CutTor.onionFor(gBrowser.selectedBrowser);
+    };
+    gBrowser.addTabsProgressListener({
+      onLocationChange(browser, webProgress) {
+        if (!webProgress.isTopLevel) {
+          return;
+        }
+        // In a Tor window, a site's .onion address can be used automatically.
+        const onion = torApp && Services.prefs.getBoolPref("cut.tor.preferOnions", false) && CutTor.onionFor(browser);
+        if (onion) {
+          browser.fixupAndLoadURIString(onion, { triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal() });
+          return;
+        }
+        if (browser == gBrowser.selectedBrowser) {
+          update();
+        }
+      },
+    });
+    gBrowser.tabContainer.addEventListener("TabSelect", update);
+    button.addEventListener("click", e => {
+      if (e.button == 0) {
+        window.CutUI.openOnion();
+      }
+    });
+    button.addEventListener("keypress", e => {
+      if (e.key == "Enter" || e.key == " ") {
+        window.CutUI.openOnion();
+      }
+    });
+    update();
+  }
+
+  // A Tor window: about:tor as a blank page, and Tor's status in the toolbar
+  // button and its panel.
+  function setUpTorStatus() {
+    if (typeof gInitialPages != "undefined" && !gInitialPages.includes(CutTor.HOME)) {
+      gInitialPages.push(CutTor.HOME);
+    }
+    const panel = MozXULElement.parseXULToFragment(`
+      <panel id="cut-tor-panel" type="arrow" orient="vertical" role="dialog" aria-labelledby="cut-tor-panel-title">
+        <vbox class="cut-tor-panel-body">
+          <html:h2 id="cut-tor-panel-title"></html:h2>
+          <html:p id="cut-tor-panel-detail"></html:p>
+          <html:div class="cut-tor-progress"><html:div class="cut-tor-progress-bar"></html:div></html:div>
+          <hbox class="cut-tor-panel-actions">
+            <button id="cut-tor-panel-circuit" label="New circuit for this site"/>
+            <button id="cut-tor-panel-identity" label="New identity"/>
+          </hbox>
+        </vbox>
+      </panel>`).firstElementChild;
+    document.getElementById("mainPopupSet").appendChild(panel);
+    panel.querySelector("#cut-tor-panel-circuit").addEventListener("command", () => {
+      panel.hidePopup();
+      window.CutUI.newTorCircuit();
+    });
+    panel.querySelector("#cut-tor-panel-identity").addEventListener("command", () => {
+      panel.hidePopup();
+      window.CutUI.newIdentity();
+    });
+
+    const TITLES = {
+      starting: () => "Starting Tor…",
+      connecting: s => (s.progress ? `Connecting to Tor… ${s.progress}%` : "Connecting to Tor…"),
+      connected: () => "Connected to Tor",
+      failed: () => "Couldn't connect to Tor",
+    };
+    const render = () => {
+      const s = CutTor.status;
+      const title = (TITLES[s.state] || TITLES.starting)(s);
+      root.setAttribute("cut-tor-state", s.state);
+      root.style.setProperty("--cut-tor-progress", `${s.state == "connected" ? 100 : s.progress}%`);
+      document.getElementById("cut-tor-button")?.setAttribute("tooltiptext", title);
+      panel.querySelector("#cut-tor-panel-title").textContent = title;
+      panel.querySelector("#cut-tor-panel-detail").textContent =
+        s.state == "connected"
+          ? "Everything in this window goes through Tor. Each site has a circuit of its own."
+          : s.error || (s.warning ? "Tor is having trouble connecting. If Tor is blocked where you are, a bridge can help (Settings › Cut Browser in a normal window)." : s.summary ? `${s.summary}.` : "");
+    };
+    Services.obs.addObserver(render, CutTor.STATUS_TOPIC);
+    window.addEventListener("unload", () => Services.obs.removeObserver(render, CutTor.STATUS_TOPIC));
+    render();
   }
 
   // Ctrl+Alt+C (Cmd+Alt+C on macOS) toggles compact mode, as in Zen.

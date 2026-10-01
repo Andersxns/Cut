@@ -6,7 +6,7 @@ import { Agent, fetch } from 'undici';
 
 import { socksConnect, socksConnector } from '../src/net/socks.js';
 import { encodeQuery, decodeResponse } from '../src/net/doh.js';
-import { validateNetwork, NETWORK_DEFAULTS } from '../src/net/settings.js';
+import { validateNetwork, fromEnvironment, NETWORK_DEFAULTS } from '../src/net/settings.js';
 
 // A tiny SOCKS5 server (RFC 1928/1929) that records what clients ask for.
 function socksServer({ requireAuth = false } = {}) {
@@ -124,4 +124,16 @@ test('connection settings are validated', () => {
   assert.ok(validateNetwork(new URLSearchParams('proxyHost=bad host!')).errors.length);
   assert.ok(validateNetwork(new URLSearchParams('doh=strict&dohProvider=custom&dohUrl=http://insecure')).errors.length);
   assert.equal(validateNetwork(new URLSearchParams('mode=warp-drive')).settings.mode, NETWORK_DEFAULTS.mode);
+});
+
+test('Tor and proxies can be chosen with environment variables', () => {
+  assert.deepEqual(fromEnvironment({ CUT_TOR: '1' }), { mode: 'tor' });
+  assert.deepEqual(fromEnvironment({ CUT_TOR: '127.0.0.1:9150' }), { mode: 'tor', torHost: '127.0.0.1', torPort: 9150 });
+  assert.deepEqual(fromEnvironment({ CUT_TOR: '[::1]:39217' }), { mode: 'tor', torHost: '::1', torPort: 39217 });
+  assert.deepEqual(fromEnvironment({ CUT_TOR: 'no' }), {});
+  assert.deepEqual(fromEnvironment({ CUT_TOR: '127.0.0.1:99999' }), {}, 'an impossible port is ignored');
+  const proxy = fromEnvironment({ CUT_PROXY: 'socks5h://user:pa%20ss@10.0.0.2:1080' });
+  assert.equal(proxy.proxyHost, '10.0.0.2');
+  assert.equal(proxy.proxyPass, 'pa ss');
+  assert.equal(proxy.remoteDns, true);
 });

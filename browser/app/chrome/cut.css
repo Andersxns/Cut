@@ -363,3 +363,138 @@ sidebar-main {
 :root[cut-compact] #cut-compact-button {
   --toolbarbutton-icon-fill: var(--cut-accent);
 }
+
+/* ---------- Tor windows (CutTor.sys.mjs) ---------- */
+
+/* Purple where Cut is orange, and a frame with a hint of it. */
+:root[cut-tor] {
+  --cut-accent: #8b5cf6;
+  --cut-frame: light-dark(#ebe8f2, #16131d);
+}
+
+:root[cut-tor]:root:root {
+  --color-accent-primary: light-dark(#6d3fd9, #b69cff);
+  --color-accent-primary-hover: light-dark(#5a2fc2, #c9b5ff);
+  --color-accent-primary-active: light-dark(#4b25a6, #d8cbff);
+  --button-text-color-primary: light-dark(#ffffff, #160f24);
+}
+
+:root[cut-tor-unavailable] .cut-tor-item,
+:root:not([cut-tor]) .cut-tor-only {
+  display: none !important;
+}
+
+/* Every window of a Tor window's browser is a private Tor window, and "New
+ * identity" (in the Tor button's panel) does what "End private session" does,
+ * with new Tor circuits too. */
+:root[cut-tor] :is(#appMenu-new-window-button2, #appMenu-new-private-window-button2, #menu_newNavigator, #menu_newPrivateWindow, #reset-pbm-toolbar-button) {
+  display: none !important;
+}
+
+/* ".onion" in the address bar, for a site with an .onion address. */
+#cut-onion-button {
+  width: auto !important;
+  gap: 4px;
+  margin-inline: 2px;
+  padding-inline: 7px 9px !important;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, #8b5cf6 16%, transparent);
+  color: light-dark(#5b2fd0, #c4b0ff);
+  cursor: default;
+
+  &:hover {
+    background-color: color-mix(in srgb, #8b5cf6 26%, transparent);
+  }
+
+  > .urlbar-icon {
+    list-style-image: url("chrome://browser/content/cut/icons/tor.svg");
+    -moz-context-properties: fill;
+    fill: currentColor;
+    width: 16px;
+    height: 16px;
+    padding: 0 !important;
+  }
+
+  > .cut-onion-label {
+    margin: 0;
+    font-size: 0.9em;
+    font-weight: 600;
+  }
+}
+
+/* Tor's status beside the address bar, in Tor windows. */
+#cut-tor-button {
+  list-style-image: url("chrome://browser/content/cut/icons/tor.svg");
+}
+
+:root[cut-tor-state="connected"] #cut-tor-button {
+  --toolbarbutton-icon-fill: light-dark(#6d3fd9, #b69cff);
+}
+
+:root[cut-tor-state="failed"] #cut-tor-button {
+  --toolbarbutton-icon-fill: light-dark(#c42b1c, #ff8a80);
+}
+
+:root:is([cut-tor-state="starting"], [cut-tor-state="connecting"]) #cut-tor-button > .toolbarbutton-icon {
+  animation: cut-tor-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes cut-tor-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+#cut-tor-panel {
+  .cut-tor-panel-body {
+    width: 21em;
+    padding: 16px;
+    gap: 8px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.1em;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-color-deemphasized);
+    line-height: 1.4;
+  }
+
+  .cut-tor-progress {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--cut-separator);
+    overflow: hidden;
+  }
+
+  .cut-tor-progress-bar {
+    width: var(--cut-tor-progress, 0%);
+    height: 100%;
+    background: var(--cut-accent);
+    transition: width 300ms var(--cut-ease);
+  }
+
+  .cut-tor-panel-actions {
+    gap: 8px;
+    margin-top: 6px;
+
+    > button {
+      margin: 0;
+    }
+  }
+}
+
+:root:not([cut-tor-state="connecting"]) #cut-tor-panel .cut-tor-progress,
+:root:not([cut-tor-state="connected"]) #cut-tor-panel-circuit {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root #cut-tor-button > .toolbarbutton-icon {
+    animation: none !important;
+  }
+}

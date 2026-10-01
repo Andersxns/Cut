@@ -6,6 +6,7 @@ import { patchAppData } from './binaries.mjs';
 import { patchBrowserOmni } from './omni.mjs';
 import { readTarXz, TarWriter, xzWriter } from './tar.mjs';
 import { cutSearchFiles } from './cutsearch.mjs';
+import { torFiles } from './tor.mjs';
 import { IDENTITY, PRODUCT, appIni, buildStamp } from './product.mjs';
 
 // Builds Cut Browser for Linux (x86-64) from Mozilla's tarball, streaming
@@ -149,12 +150,18 @@ License: MIT
 Files: opt/${NAME}/cut-search/cut-search
 Copyright: Node.js contributors
 License: MIT and others (see opt/${NAME}/cut-search/NODE-LICENSE.txt)
+
+Files: opt/${NAME}/tor/*
+Copyright: The Tor Project, Inc. and others
+License: BSD-3-Clause and others (see opt/${NAME}/tor/licenses/)
+Comment: Tor and its pluggable transports, from the Tor expert bundle of Tor
+ Browser ${versions.tor}.
 `;
 }
 
 // Collects every file of the app folder, in tar order, as
 // { rel, mode, data } or { rel, dir: true } or { rel, symlink }.
-async function assembleApp({ firefoxTarball, nodeTarball, repoRoot, appDir, work, buildID }) {
+async function assembleApp({ firefoxTarball, nodeTarball, torBundle, repoRoot, appDir, work, buildID }) {
   const files = [];
   const dirs = new Set();
   const addDir = (rel) => {
@@ -212,6 +219,14 @@ async function assembleApp({ firefoxTarball, nodeTarball, repoRoot, appDir, work
     files.push({ rel: `cut-search/app/${rel}`, mode: 0o644, data: fs.readFileSync(abs) });
   }
 
+  // Tor, for Tor windows.
+  addDir('tor');
+  for (const { rel, mode, data } of await torFiles(torBundle)) {
+    const parts = `tor/${rel}`.split('/');
+    for (let i = 2; i < parts.length; i++) addDir(parts.slice(0, i).join('/'));
+    files.push({ rel: `tor/${rel}`, mode, data });
+  }
+
   // Desktop integration files, used by the .deb and by install.sh.
   addDir('icons');
   for (const size of HICOLOR) files.push({ rel: `icons/${NAME}-${size}.png`, mode: 0o644, data: I.appPng(size) });
@@ -241,11 +256,11 @@ async function writeTarXz(file, build) {
   await xz.done();
 }
 
-export async function buildLinux({ firefoxTarball, nodeTarball, work, repoRoot, appDir, distDir, versions }) {
+export async function buildLinux({ firefoxTarball, nodeTarball, torBundle, work, repoRoot, appDir, distDir, versions }) {
   fs.rmSync(work, { recursive: true, force: true });
   fs.mkdirSync(work, { recursive: true });
   const buildID = buildStamp();
-  const { files } = await assembleApp({ firefoxTarball, nodeTarball, repoRoot, appDir, work, buildID });
+  const { files } = await assembleApp({ firefoxTarball, nodeTarball, torBundle, repoRoot, appDir, work, buildID });
   const outputs = [];
 
   // 1. Portable archive with install.sh.

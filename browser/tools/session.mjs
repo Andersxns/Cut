@@ -16,7 +16,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const exe = process.env.CUT_EXE || path.join(root, '.build', 'win', 'Cut Browser', 'cut.exe');
 const profile = path.join(root, '.build', 'test-profile');
-const PORT = 2829;
+const PORT = Number(process.env.CUT_MARIONETTE_PORT) || 2829; // another port reaches e.g. a Tor window started with --marionette
 const pidFile = path.join(root, '.build', 'test-session.pid');
 
 const alive = (pid) => {

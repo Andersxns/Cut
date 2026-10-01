@@ -69,7 +69,7 @@ jobs:
         run: |
           npm ci
           npm ci --prefix browser
-      - name: Build (downloads the newest Firefox release and Node 24 LTS, checking their checksums)
+      - name: Build (downloads the newest Firefox, Node 24 LTS and Tor, checking their checksums)
         run: node browser/build.mjs --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
@@ -80,6 +80,12 @@ jobs:
             browser/dist/*.exe
             browser/dist/*.deb
             browser/dist/*.tar.xz
+      # the versions the packages were built from, for the release notes
+      - if: matrix.target == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cut-browser-versions
+          path: browser/dist/versions.json
 
   sign:
     name: Sign the Windows installer
@@ -141,12 +147,20 @@ jobs:
         with:
           name: ${{ needs.sign.result == 'success' && 'cut-browser-Windows-signed' || 'cut-browser-Windows' }}
           path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: cut-browser-versions
+          path: versions
+      - name: Versions
+        id: versions
+        run: echo "tor=$(jq -r '.tor // empty' versions/versions.json)" >> "$GITHUB_OUTPUT"
       - name: Checksums
         run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - name: Release name and notes
         id: notes
         env:
           SIGNED: ${{ needs.sign.result == 'success' }}
+          TOR: ${{ steps.versions.outputs.tor }}
         run: |
           echo "name=Cut Browser ${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           # the Firefox version is part of the .deb's name (cut-browser_1.0.0+firefox156.0.1_amd64.deb)
@@ -157,10 +171,10 @@ jobs:
             signing="The Windows installer in this release isn't code-signed, so SmartScreen may warn you the first time: choose **More info → Run anyway**."
           fi
           # a version's own notes (docs/releases/<tag>.md) go above the generated list of changes;
-          # "<!-- signing -->" and "<!-- firefox -->" are filled in here
+          # "<!-- signing -->", "<!-- firefox -->" and "<!-- tor -->" are filled in here
           notes="docs/releases/${GITHUB_REF_NAME}.md"
-          [ -f "$notes" ] || printf '<!-- signing -->\n\nBuilt on Firefox <!-- firefox -->.\n' > "$notes"
-          sed -e "s|<!-- signing -->|$signing|" -e "s|<!-- firefox -->|$firefox|" "$notes" > release-notes.md
+          [ -f "$notes" ] || printf '<!-- signing -->\n\nBuilt on Firefox <!-- firefox --> and Tor from Tor Browser <!-- tor -->.\n' > "$notes"
+          sed -e "s|<!-- signing -->|$signing|" -e "s|<!-- firefox -->|$firefox|" -e "s|<!-- tor -->|$TOR|" "$notes" > release-notes.md
           echo "path=release-notes.md" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:

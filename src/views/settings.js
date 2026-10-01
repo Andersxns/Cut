@@ -286,8 +286,14 @@ function appearancePane(p) {
 // After a save the page lands on this pane, so its notices are shown here.
 function connectionPane(network, status) {
   const s = network.settings;
-  const locked = !network.canManage && !network.tokenAllowed;
+  const locked = network.fixed || (!network.canManage && !network.tokenAllowed);
   const statusText = NOTICES[`network:${status}`];
+  const lockedText =
+    network.fixed && s.mode === 'tor'
+      ? 'This Cut Search belongs to a Cut Browser Tor window, so its searches always go through Tor.'
+      : network.fixed
+        ? 'This Cut Search’s connection is set by whoever started it.'
+        : 'These settings apply to the whole server, so they can only be changed on the computer running Cut.';
   const input = (name, value, attrs = '') => html`<input name="${name}" value="${value}"${attrs}>`;
   return pane(
     'connection',
@@ -297,7 +303,7 @@ function connectionPane(network, status) {
       ${statusText ? html`<p class="${WARNINGS.has(status) ? 'notice notice--warn' : 'notice'}">${statusText}</p>` : ''}
       <p class="notice notice--quiet">Currently: <strong>${network.description}</strong></p>
       ${network.errors.length ? html`<ul class="notice notice--error">${network.errors.map((e) => html`<li>${e}</li>`)}</ul>` : ''}
-      ${locked ? html`<p class="notice">These settings apply to the whole server, so they can only be changed on the computer running Cut.</p>` : ''}
+      ${locked ? html`<p class="notice">${lockedText}</p>` : ''}
       <fieldset class="netform__body"${locked ? html` disabled` : ''}>
         ${group(
           'Connection settings',

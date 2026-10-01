@@ -6,6 +6,7 @@ import { patchAppData, rebrandExecutable } from './binaries.mjs';
 import { patchBrowserOmni } from './omni.mjs';
 import { readZip } from './zip.mjs';
 import { cutSearchFiles } from './cutsearch.mjs';
+import { torFiles } from './tor.mjs';
 import { IDENTITY, PRODUCT, appIni, buildStamp } from './product.mjs';
 
 // Builds the Windows app folder ("Cut Browser") from Mozilla's installer.
@@ -66,7 +67,7 @@ export function extractFirefox(installer, work) {
   return path.join(work, 'core');
 }
 
-export function stageWindows({ firefoxInstaller, nodeZip, work, repoRoot, appDir }) {
+export async function stageWindows({ firefoxInstaller, nodeZip, torBundle, work, repoRoot, appDir }) {
   const core = extractFirefox(firefoxInstaller, work);
   const stage = path.join(work, PRODUCT.name);
   fs.renameSync(core, stage);
@@ -115,6 +116,7 @@ export function stageWindows({ firefoxInstaller, nodeZip, work, repoRoot, appDir
   fs.copyFileSync(path.join(appDir, 'policies.json'), path.join(stage, 'distribution', 'policies.json'));
 
   stageCutSearch(stage, { nodeZip, repoRoot });
+  await stageTor(stage, torBundle);
   return { stage, version, buildID };
 }
 
@@ -129,6 +131,15 @@ function stageCutSearch(stage, { nodeZip, repoRoot }) {
   fs.writeFileSync(path.join(dir, 'cut-search.exe'), zip.get(`${top}/node.exe`).data);
   fs.writeFileSync(path.join(dir, 'NODE-LICENSE.txt'), zip.get(`${top}/LICENSE`).data);
   copyCutSearchApp(dir, repoRoot);
+}
+
+// Tor, for Tor windows.
+async function stageTor(stage, torBundle) {
+  for (const { rel, data } of await torFiles(torBundle)) {
+    const dest = path.join(stage, 'tor', ...rel.split('/'));
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, data);
+  }
 }
 
 function copyCutSearchApp(dir, repoRoot) {

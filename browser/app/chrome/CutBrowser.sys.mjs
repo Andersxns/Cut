@@ -8,6 +8,7 @@
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
+  CutTor: "resource://cut/CutTor.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   Subprocess: "resource://gre/modules/Subprocess.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
@@ -21,6 +22,7 @@ const TOOLBAR_ORDER = [
   "stop-reload-button",
   "vertical-spacer",
   "urlbar-container",
+  "cut-tor-button", // Tor windows only
   "cut-compact-button",
   "reset-pbm-toolbar-button",
   "unified-extensions-button",
@@ -104,6 +106,9 @@ export const CutSearch = {
         this.state = "running";
         this.port = port;
         this.baseURL = `http://127.0.0.1:${port}`;
+        if (lazy.CutTor.isTorApp) {
+          lazy.CutTor.allowLocalServer(port);
+        }
         if (port != first) {
           Services.prefs.setIntPref("cut.search.port", port);
         }
@@ -135,6 +140,9 @@ export const CutSearch = {
           CUT_EMBEDDED: "1",
           RATE_LIMIT: "false",
           NODE_ENV: "production",
+          // A Tor window's Cut Search searches through the window's Tor, and
+          // its settings page can't switch that off.
+          ...(lazy.CutTor.isTorApp ? { CUT_TOR: `127.0.0.1:${lazy.CutTor.socksPort}`, CUT_NETWORK_FIXED: "1" } : {}),
         },
         environmentAppend: true,
         stderr: "stdout",
@@ -311,6 +319,8 @@ export const CutBrowser = {
     this._initialized = true;
     Services.obs.addObserver(this, "quit-application");
     this._registerContentStyles();
+    // Before Cut Search starts: in a Tor window, it needs Tor's port.
+    lazy.CutTor.init();
     // The engine is registered straight away on the expected address, so
     // even the first search goes to Cut; if the server has to use another
     // port, the engine follows it once the server is up.
@@ -373,6 +383,23 @@ export const CutBrowser = {
           event.target.ownerGlobal.CutUI.toggleCompact();
         },
       });
+      if (lazy.CutTor.isTorApp) {
+        CustomizableUI.createWidget({
+          id: "cut-tor-button",
+          type: "button",
+          label: "Tor",
+          tooltiptext: "Tor",
+          onCommand(event) {
+            event.target.ownerGlobal.CutUI.showTorPanel(event.target);
+          },
+        });
+      }
+    }
+    // In a Tor window, Tor's status sits beside the address bar.
+    if (lazy.CutTor.isTorApp && !CustomizableUI.getPlacementOfWidget("cut-tor-button") && !Services.prefs.getBoolPref("cut.ui.torButtonPlaced", false)) {
+      Services.prefs.setBoolPref("cut.ui.torButtonPlaced", true);
+      let urlbar = CustomizableUI.getPlacementOfWidget("urlbar-container");
+      CustomizableUI.addWidgetToArea("cut-tor-button", CustomizableUI.AREA_NAVBAR, urlbar ? urlbar.position + 1 : undefined);
     }
     if (Services.prefs.getIntPref("cut.ui.toolbarVersion", 0) >= TOOLBAR_VERSION) {
       return;

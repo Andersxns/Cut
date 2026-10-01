@@ -5,7 +5,7 @@
 # Cut
 
 **A private web browser and search engine.**
-Cut Browser is a Firefox-based browser for Windows and Linux, laid out like Zen Browser, with Cut Search built in: a metasearch engine for the web, images, videos, news and torrents that runs on your own computer, strips the tracking out of every link and keeps no record of you.
+Cut Browser is a Firefox-based browser for Windows and Linux, laid out like Zen Browser, with Tor windows like Brave's and Cut Search built in: a metasearch engine for the web, images, videos, news and torrents that runs on your own computer, strips the tracking out of every link and keeps no record of you.
 
 [![Build](https://github.com/Andersxns/Cut/actions/workflows/build.yml/badge.svg)](https://github.com/Andersxns/Cut/actions/workflows/build.yml)
 [![Cut Search: MIT](https://img.shields.io/badge/Cut%20Search-MIT-blue.svg)](LICENSE)
@@ -56,7 +56,7 @@ To install without questions, run `Cut-Browser-<version>-Setup-x64.exe /S`, opti
 
 ### Updates
 
-Cut Browser doesn't update itself from Mozilla, because Mozilla's updates would turn it back into plain Firefox. Security fixes come as new Cut Browser releases instead, built on each new Firefox release: install the new version over the old one and your bookmarks, history and settings stay. **Menu → Help → About Cut** shows the Firefox version you're on. To hear about new versions, choose **Watch → Custom → Releases** at the top of this page.
+Cut Browser doesn't update itself from Mozilla, because Mozilla's updates would turn it back into plain Firefox. Security fixes come as new Cut Browser releases instead, built on each new Firefox and Tor release: install the new version over the old one and your bookmarks, history and settings stay. **Menu → Help → About Cut** shows the Firefox version you're on. To hear about new versions, choose **Watch → Custom → Releases** at the top of this page.
 
 ## Cut Browser
 
@@ -81,8 +81,15 @@ Cut Browser is built on Firefox: the same engine, the same extensions and all of
   - No prefetching or speculative connections, no WebRTC local-address leaks and no background check-ins.
   - AI features, sponsored shortcuts and stories, Firefox Suggest and Pocket are off.
   - uBlock Origin is installed on first run.
+- **Tor windows** (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>), like Brave's private windows with Tor. Everything in a Tor window goes through the Tor network, using the Tor that comes with Cut Browser: sites can't see your IP address, your internet provider can't see which sites you visit, and each site gets a Tor circuit of its own. Tor windows are always private, share nothing with your other windows, and search with Cut Search through Tor.
+  - .onion addresses open in a Tor window from anywhere (a page's links to them ask first), and **.onion** appears in the address bar when a site has an .onion address of its own.
+  - **New identity** and **New Tor circuit for this site** are in the Tor button beside the address bar, and bridges (obfs4, Snowflake, meek or your own) help where Tor is blocked.
+  - Tor windows hide where you are, but they aren't Tor Browser, which also makes everyone look the same to the sites they visit. When your safety depends on it, use [Tor Browser](https://www.torproject.org/download/).
+
+  <img src="docs/screenshots/tor-window.png" alt="A Tor window, connected to Tor" width="820">
+
 - **Cut Search built in.** It runs on your own computer and starts and stops with the browser. It listens only on `127.0.0.1`, the computer's own loopback address, which nothing on your network or the internet can reach. It's the default search in normal and private windows and supplies the address bar's suggestions. You can point Cut Browser at your own Cut Search server instead, or choose any other search engine.
-- **Firefox's own settings**, all still there, plus a **Cut Browser** section for the layout and Cut Search. Every privacy default above is a normal Firefox setting you can change.
+- **Firefox's own settings**, all still there, plus a **Cut Browser** section for the layout, Cut Search and Tor windows. Every privacy default above is a normal Firefox setting you can change.
 
   <img src="docs/screenshots/settings.png" alt="The Cut Browser section of Settings" width="820">
 
@@ -216,7 +223,8 @@ include proxy credentials.
 settings and reports the exit address and whether it is a Tor exit.
 
 To run Cut Search over Tor, start Tor and then either choose *Tor* in settings
-or start Cut Search with `CUT_TOR=1` (or `CUT_PROXY=socks5h://127.0.0.1:9050`).
+or start Cut Search with `CUT_TOR=1` (`CUT_TOR=127.0.0.1:9150` for Tor Browser's Tor, or
+`CUT_PROXY=socks5h://127.0.0.1:9050`).
 Expect searches to be slower and some engines to refuse Tor exits; Cut Search
 shows results from whichever engines answer.
 
@@ -285,7 +293,8 @@ All optional, via environment variables:
 | `RATE_LIMIT_SUGGEST` | `300` | Autocomplete requests per client per minute. |
 | `DEBUG` | `false` | Log upstream engine failures and slow engines (never queries). |
 | `CUT_PROXY` | — | Proxy for upstream requests, e.g. `socks5h://127.0.0.1:9050` (`h` = the proxy resolves names), `socks5://`, `socks4a://`, `http://user:pass@host:3128`. |
-| `CUT_TOR` | `false` | Connect through Tor at `127.0.0.1:9050` with per-search circuits. |
+| `CUT_TOR` | `false` | Connect through Tor with per-search circuits: `1` for Tor at `127.0.0.1:9050`, or the address of Tor's SOCKS port, e.g. `127.0.0.1:9150`. |
+| `CUT_NETWORK_FIXED` | `false` | Use only the connection these variables set; the settings page can't change it (Cut Browser's Tor windows run their Cut Search this way). |
 | `CUT_DOH` | `off` | DNS over HTTPS: `cloudflare`, `quad9`, `mullvad`, `adguard`, `nextdns`, `google` or an `https://` URL. |
 | `CUT_USER_AGENT` | Firefox UA | User-Agent sent to upstream engines. |
 | `CUT_ADMIN_TOKEN` | — | Lets someone who isn't on the Cut Search machine change connection settings by entering this token. |
@@ -350,10 +359,10 @@ Signing starts once SignPath Foundation has accepted the project. Releases publi
 - **Committers and reviewers:** [Andersxns](https://github.com/Andersxns). Changes from other contributors are reviewed by a committer before they are merged.
 - **Approvers:** [Andersxns](https://github.com/Andersxns). Every release is approved in SignPath before it is signed.
 
-**Privacy:** Cut Browser and Cut Search have no telemetry, ads or usage statistics, and send nothing about you anywhere you haven't asked them to. Cut Search contacts search engines only when you search. Like Firefox, Cut Browser also keeps its security lists up to date on its own (Safe Browsing, certificate revocations and add-on blocklists), updates uBlock Origin and its filter lists, and installs uBlock Origin from addons.mozilla.org the first time it starts.
+**Privacy:** Cut Browser and Cut Search have no telemetry, ads or usage statistics, and send nothing about you anywhere you haven't asked them to. Cut Search contacts search engines only when you search, and a Tor window connects to the Tor network only once you open one. Like Firefox, Cut Browser also keeps its security lists up to date on its own (Safe Browsing, certificate revocations and add-on blocklists), updates uBlock Origin and its filter lists, and installs uBlock Origin from addons.mozilla.org the first time it starts.
 
 ## License
 
 Cut Search (everything outside `browser/`) is released under the [MIT License](LICENSE). Cut Browser's own files, in `browser/`, are released under the [Mozilla Public License 2.0](browser/LICENSE), like Firefox.
 
-Cut Browser includes Mozilla Firefox (MPL 2.0) and Node.js (MIT), and installs uBlock Origin (GPL 3.0) from addons.mozilla.org on first run. Cut Search uses cheerio (MIT) and undici (MIT). The Figtree font in `public/fonts` is licensed under the SIL Open Font License (see `public/fonts/OFL.txt`). Firefox is a trademark of the Mozilla Foundation; Cut Browser is not affiliated with or endorsed by Mozilla.
+Cut Browser includes Mozilla Firefox (MPL 2.0), Node.js (MIT), and Tor (BSD 3-Clause) with its lyrebird bridge client from the Tor Project (their licenses are in `tor/licenses/`), and installs uBlock Origin (GPL 3.0) from addons.mozilla.org on first run. Cut Search uses cheerio (MIT) and undici (MIT). The Figtree font in `public/fonts` is licensed under the SIL Open Font License (see `public/fonts/OFL.txt`). Firefox is a trademark of the Mozilla Foundation; Cut Browser is not affiliated with or endorsed by Mozilla.

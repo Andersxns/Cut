@@ -51,8 +51,9 @@ folders elsewhere; the default, `%LOCALAPPDATA%\Programs\Cut Browser`, is fine.)
   your search, but no cookies or anything that identifies your browser, and
   never see which results you click; turn on Tor or a proxy in Cut Search's
   settings and they don't see your IP address either. It's the default in
-  normal and private windows, and supplies the address bar's suggestions. You can point the browser at your own Cut Search server instead,
-  or pick any other engine in *Settings → Search*.
+  normal and private windows, and supplies the address bar's suggestions.
+  You can point the browser at your own Cut Search server instead, or pick
+  any other engine in *Settings → Search*.
 - That's why search results come from `http://127.0.0.1:28800`: 127.0.0.1 is
   the computer's own loopback address, which nothing on your network or the
   internet can reach, and the server listens on nothing else. It also rejects
@@ -74,22 +75,59 @@ folders elsewhere; the default, `%LOCALAPPDATA%\Programs\Cut Browser`, is fine.)
 - uBlock Origin is installed on first run (from addons.mozilla.org).
 
 Every one of these is a normal Firefox setting you can change. *Settings → Cut
-Browser* has the layout options and Cut Search's status; *Settings → Privacy
-and security* is Firefox's.
+Browser* has the layout options, Cut Search's status and Tor windows;
+*Settings → Privacy and security* is Firefox's.
 
 Profiles live in `%APPDATA%\Cut` (Windows) and `~/.cut` (Linux), separate from
 any Firefox profile.
+
+## Tor windows
+
+*New Tor window* (in the menu, or Alt+Shift+N) opens a window whose every
+connection goes through Tor, like Brave's "Private window with Tor":
+
+- **A browser of its own.** A Tor window belongs to a second copy of Cut
+  Browser with its own profile (`tor-window`, inside your profile), started by
+  `app/chrome/CutTor.sys.mjs`. It shares no cookies, cache, history or
+  connections with your other windows, and it's always in private browsing:
+  closing the last Tor window forgets everything.
+- **Tor comes with Cut Browser.** The Tor client and its bridge client,
+  lyrebird, from the Tor Project's expert bundle, are in `tor/`. A Tor window
+  starts Tor when it opens and stops it when it closes; Tor also quits by
+  itself if the window's browser goes away.
+- **Nothing goes around Tor.** Firefox's proxy settings send every connection
+  to Tor, which also looks up the names; local DNS is off, there's no fallback
+  to a direct connection, and WebRTC is off. The one thing a Tor window reaches
+  directly is its own Cut Search, which searches through Tor and can't be
+  switched to a direct connection.
+- **A circuit per site.** Each site's connections carry Tor credentials of
+  their own, as in Tor Browser, so Tor gives each site separate circuits.
+  *New Tor circuit for this site* changes them; *New identity* starts the Tor
+  window again with nothing kept.
+- **Alike for everyone, as far as Firefox goes.** First-party isolation and
+  Firefox's resist-fingerprinting mode are on, as in Tor Browser.
+- **.onion addresses** typed or bookmarked in a normal window open in a Tor
+  window. When a page leads to one (a link, a script or a redirect), a bar in
+  the tab offers to open it there instead, so no page can send your Tor window
+  somewhere by itself. Sites that send an `Onion-Location` header get an
+  *.onion* button in the address bar.
+- **Bridges**, in *Settings → Cut Browser*: the Tor Project's built-in obfs4,
+  Snowflake and meek bridges, or your own from bridges.torproject.org.
+
+Tor windows aren't Tor Browser, which also hides its window size, keeps a
+tighter list of fonts and more, and is built and tested for exactly this job.
+Use Tor Browser when your safety depends on staying anonymous.
 
 ## Updates
 
 Mozilla's updater would replace Cut Browser with plain Firefox, so it's
 removed. **Security fixes come as new Cut Browser releases** instead: each
 release is built on the newest Firefox release (Mozilla ships one about every
-four weeks, with security fixes in between), and a workflow checks every day
-for a newer Firefox. Installing a new version over the old one keeps your
-profile. *Settings → Cut Browser* and the About dialog show the Firefox
-version you're on. If you build Cut Browser yourself, `node build.mjs` always
-fetches the newest Firefox release.
+four weeks, with security fixes in between) and the Tor from the newest Tor
+Browser, and a workflow checks every day for newer ones. Installing a new
+version over the old one keeps your profile. *Settings → Cut Browser* and the
+About dialog show the Firefox version you're on. If you build Cut Browser
+yourself, `node build.mjs` always fetches the newest Firefox and Tor.
 
 ## Build
 
@@ -106,12 +144,13 @@ node build.mjs       # Windows and Linux; or --target win / --target linux
   Windows' `tar`).
 - Linux builds need the `xz` tool (built in on Linux; included with Git for
   Windows).
-- `FIREFOX_VERSION=156.0.1` or `NODE_VERSION=24.21.0` pins a version.
+- `FIREFOX_VERSION=156.0.1`, `NODE_VERSION=24.21.0` or `TOR_VERSION=15.0.24`
+  (a Tor Browser version; its Tor is used) pins a version.
 - `CUT_BUILD_DIR=.build-next` builds in another folder, e.g. while a copy from
   `.build` is running. The build folders can be deleted at any time.
 
-Downloads are checked against Mozilla's and Node's published SHA-512 and
-SHA-256 checksums and cached in `.cache/`.
+Downloads are checked against Mozilla's, Node's and the Tor Project's
+published SHA-512 and SHA-256 checksums and cached in `.cache/`.
 
 ### How it's made
 
@@ -129,14 +168,21 @@ Firefox (which takes hours and tens of gigabytes):
    `app/policies.json` turns off updates and installs uBlock Origin.
 4. Cut Search (this repository's server plus Node's runtime) is bundled in
    `cut-search/` and started by `app/chrome/CutBrowser.sys.mjs`.
+5. Tor and lyrebird, from the Tor expert bundle of the newest Tor Browser, go
+   in `tor/` (`lib/tor.mjs`), for Tor windows (`app/chrome/CutTor.sys.mjs`).
 
 `tools/session.mjs` starts a test copy and drives it with Marionette (Firefox's
-remote-control protocol): `start`, `eval`, `shot`, `stop`.
+remote-control protocol): `start`, `eval`, `shot`, `stop`. With
+`CUT_MARIONETTE_PORT`, it reaches another copy started with `--marionette`,
+such as a Tor window's.
 
 ## Known limitations
 
 - The Linux packages are built and checked structurally but haven't been run on
   a Linux machine by the build; please report anything that misbehaves.
+- Some of the Tor Project's built-in obfs4 bridges are often busy or blocked;
+  if a Tor window can't connect through them, try Snowflake or meek, or
+  bridges of your own.
 - Streaming sites that use DRM (Netflix and similar) may not play on Windows:
   the Widevine module is signed for Mozilla's own executables.
 - English (US) only out of the box; other languages install from
@@ -148,4 +194,7 @@ remote-control protocol): `start`, `eval`, `shot`, `stop`.
 Cut Browser's own files are MPL 2.0, like Firefox. Firefox is a trademark of
 the Mozilla Foundation; Cut Browser is not affiliated with or endorsed by
 Mozilla. Node.js is MIT-licensed (its license ships as
-`cut-search/NODE-LICENSE.txt`).
+`cut-search/NODE-LICENSE.txt`). Tor is under the 3-clause BSD license and
+lyrebird under BSD licenses; theirs and their components' licenses ship in
+`tor/licenses/`. Tor is a trademark of The Tor Project, Inc.; Cut Browser is
+not affiliated with the Tor Project.

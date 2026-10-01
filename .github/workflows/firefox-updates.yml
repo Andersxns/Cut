@@ -1,9 +1,10 @@
-name: Firefox updates
+name: Firefox and Tor updates
 
 # Cut Browser doesn't update itself from Mozilla, so its security fixes come
 # from new releases. This checks every day for a Firefox release newer than
-# the one the latest Cut Browser release is built on, and opens an issue as a
-# reminder to publish a new version.
+# the one the latest Cut Browser release is built on, and for a newer Tor
+# (from Tor Browser's releases), and opens an issue as a reminder to publish
+# a new version.
 
 on:
   schedule:
@@ -18,18 +19,31 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Compare the newest Firefox with the latest release
+      - name: Compare the newest Firefox and Tor with the latest release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          latest=$(curl -fsS https://product-details.mozilla.org/1.0/firefox_versions.json | jq -r .LATEST_FIREFOX_VERSION)
-          # the .deb in each release is named cut-browser_<version>+firefox<firefox>_amd64.deb
-          built=$(gh release view --json assets --jq '.assets[].name' 2>/dev/null | sed -nE 's/.*\+firefox([0-9.]+)_amd64\.deb$/\1/p' | head -1)
-          echo "Newest Firefox: $latest; latest Cut Browser release: ${built:-none}"
-          if [ -z "$built" ] || [ "$built" = "$latest" ]; then exit 0; fi
-          title="Firefox $latest is out: publish a new Cut Browser build"
-          if gh issue list --state open --search "\"Firefox $latest is out\" in:title" --json number --jq 'length' | grep -qv '^0$'; then exit 0; fi
-          gh issue create --title "$title" --body "The latest Cut Browser release is built on Firefox $built. Firefox $latest is out, and Firefox releases usually include security fixes.
+          # Opens an issue with this title, unless one is open already.
+          remind() {
+            if gh issue list --state open --search "\"$1\" in:title" --json number --jq 'length' | grep -qv '^0$'; then return; fi
+            gh issue create --title "$1" --body "$2
 
-          To publish a new build, raise \`version\` in \`browser/package.json\`, add notes in \`docs/releases/\`, commit, and push a tag such as \`v1.0.1\`. The Build workflow builds the new Firefox release into Cut Browser and publishes it. See **Releasing** in CONTRIBUTING.md."
+          To publish a new build, raise \`version\` in \`browser/package.json\`, add notes in \`docs/releases/\`, commit, and push a tag such as \`v1.1.1\`. The Build workflow builds the newest Firefox and Tor into Cut Browser and publishes it. See **Releasing** in CONTRIBUTING.md."
+          }
+
+          firefox=$(curl -fsS https://product-details.mozilla.org/1.0/firefox_versions.json | jq -r .LATEST_FIREFOX_VERSION)
+          # the .deb in each release is named cut-browser_<version>+firefox<firefox>_amd64.deb
+          firefox_built=$(gh release view --json assets --jq '.assets[].name' 2>/dev/null | sed -nE 's/.*\+firefox([0-9.]+)_amd64\.deb$/\1/p' | head -1)
+          echo "Newest Firefox: $firefox; latest Cut Browser release: ${firefox_built:-none}"
+          if [ -n "$firefox_built" ] && [ "$firefox_built" != "$firefox" ]; then
+            remind "Firefox $firefox is out: publish a new Cut Browser build" "The latest Cut Browser release is built on Firefox $firefox_built. Firefox $firefox is out, and Firefox releases usually include security fixes."
+          fi
+
+          tor=$(curl -fsS https://aus1.torproject.org/torbrowser/update_3/release/download-linux-x86_64.json | jq -r .version)
+          # release notes say "Tor from Tor Browser <version>"
+          tor_built=$(gh release view --json body --jq .body 2>/dev/null | sed -nE 's/.*Tor from Tor Browser ([0-9]+(\.[0-9]+)+).*/\1/p' | head -1)
+          echo "Newest Tor Browser: $tor; Tor in the latest Cut Browser release: from Tor Browser ${tor_built:-none}"
+          if [ -n "$tor_built" ] && [ "$tor_built" != "$tor" ]; then
+            remind "Tor Browser $tor is out: publish a new Cut Browser build" "The latest Cut Browser release has the Tor from Tor Browser $tor_built. Tor Browser $tor is out, and its Tor may include security fixes."
+          fi

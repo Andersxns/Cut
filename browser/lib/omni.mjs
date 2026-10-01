@@ -49,6 +49,43 @@ function insertBefore(text, marker, addition, name) {
   return text.slice(0, at) + addition + text.slice(at);
 }
 
+// Inserts `addition` after the element that starts with `marker` (an empty
+// element, <tag … />).
+function insertAfterElement(text, marker, addition, name) {
+  const at = text.indexOf(marker);
+  if (at < 0) throw new Error(`${name}: couldn't find ${JSON.stringify(marker)}`);
+  const end = text.indexOf('/>', at);
+  if (end < 0 || text.slice(at, end).includes('>')) throw new Error(`${name}: ${JSON.stringify(marker)} isn't an empty element`);
+  return text.slice(0, end + 2) + addition + text.slice(end + 2);
+}
+
+// Tor windows: the menu items, Alt+Shift+N, the link menu item and the
+// ".onion" button in the address bar. cut-window.js makes them work.
+// Items marked cut-tor-item are for opening Tor windows; cut-tor-only ones
+// appear only in Tor windows.
+function torWindowMarkup(t) {
+  const name = 'browser.xhtml';
+  t = insertBefore(t, '<command id="Tools:PrivateBrowsing"', '<command id="Cut:NewTorWindow"/>\n<command id="Cut:NewIdentity"/>\n<command id="Cut:NewTorCircuit"/>\n', name);
+  t = insertBefore(t, '<key id="key_privatebrowsing"', '<key id="key_cutTorWindow" key="N" modifiers="alt,shift" command="Cut:NewTorWindow"/>\n', name);
+  t = insertAfterElement(
+    t,
+    '<toolbarbutton id="appMenu-new-private-window-button2"',
+    '\n<toolbarbutton id="appMenu-new-tor-window-button" class="subviewbutton cut-tor-item" label="New Tor window" key="key_cutTorWindow" command="Cut:NewTorWindow"/>' +
+      '\n<toolbarbutton id="appMenu-cut-new-circuit" class="subviewbutton cut-tor-only" label="New Tor circuit for this site" command="Cut:NewTorCircuit"/>' +
+      '\n<toolbarbutton id="appMenu-cut-new-identity" class="subviewbutton cut-tor-only" label="New identity" command="Cut:NewIdentity"/>',
+    name,
+  );
+  t = insertAfterElement(t, '<menuitem id="menu_newPrivateWindow"', '\n<menuitem id="menu_newTorWindow" class="cut-tor-item" label="New Tor Window" accesskey="r" key="key_cutTorWindow" command="Cut:NewTorWindow"/>', name);
+  t = insertAfterElement(t, '<menuitem id="context-openlinkprivate"', '\n<menuitem id="context-openlinkintor" class="context-menu-open-link cut-tor-item" label="Open Link in New Tor Window" accesskey="r" hidden="true"/>', name);
+  t = insertBefore(
+    t,
+    '<hbox id="star-button-box"',
+    '<hbox id="cut-onion-button" class="urlbar-page-action" role="button" hidden="true"><image class="urlbar-icon"/><label class="cut-onion-label" value=".onion"/></hbox>\n',
+    name,
+  );
+  return t;
+}
+
 export function patchBrowserOmni(file, { appDir }) {
   const entries = readZip(file);
   const put = (name, data) => {
@@ -75,11 +112,13 @@ export function patchBrowserOmni(file, { appDir }) {
   edit('chrome/chrome.manifest', (t) => `${t.trimEnd()}\nresource cut browser/content/browser/cut/\n`);
 
   edit('chrome/browser/content/browser/browser.xhtml', (t) =>
-    insertBefore(
-      t,
-      '</head>',
-      '<link rel="stylesheet" href="chrome://browser/content/cut/cut.css" />\n<script src="chrome://browser/content/cut/cut-window.js"></script>\n',
-      'browser.xhtml',
+    torWindowMarkup(
+      insertBefore(
+        t,
+        '</head>',
+        '<link rel="stylesheet" href="chrome://browser/content/cut/cut.css" />\n<script src="chrome://browser/content/cut/cut-window.js"></script>\n',
+        'browser.xhtml',
+      ),
     ),
   );
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { config } from './config.js';
 import { readPrefs, mergePrefs, serializePrefs, getRegion, REGIONS, SAFE_LEVELS, DEFAULT_PREFS, COOKIE_NAME, features, cookieMaxAge, exportCode, importCode } from './prefs.js';
-import { getNetworkSettings, validateNetwork, saveNetworkSettings, canManageNetwork, describeNetwork } from './net/settings.js';
+import { getNetworkSettings, validateNetwork, saveNetworkSettings, canManageNetwork, describeNetwork, networkFixed } from './net/settings.js';
 import { testConnection } from './net/dispatcher.js';
 import { runWithContext } from './net/context.js';
 import { ensureThreatLists, threatListStatus } from './privacy/threats.js';
@@ -488,7 +488,8 @@ function renderSettings(req, res, status, notice = {}, networkErrors = [], netwo
         settings,
         description: describeNetwork(getNetworkSettings()),
         canManage: canManageNetwork(req),
-        tokenAllowed: Boolean(process.env.CUT_ADMIN_TOKEN),
+        tokenAllowed: Boolean(process.env.CUT_ADMIN_TOKEN) && !networkFixed,
+        fixed: networkFixed,
         errors: networkErrors,
       },
     }),

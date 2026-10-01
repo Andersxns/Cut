@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<!-- about:tor, the start page of Tor windows (CutTor.sys.mjs). -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src chrome:; img-src chrome: data:; style-src chrome:; script-src chrome:" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Tor window</title>
+    <link rel="icon" href="chrome://browser/content/cut/icons/mark-tor.svg" />
+    <link rel="stylesheet" href="chrome://browser/content/cut/tor/tor.css" />
+    <script src="chrome://browser/content/cut/tor/tor.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header class="brand">
+        <img src="chrome://browser/content/cut/icons/mark-tor.svg" alt="" width="44" height="44" />
+        <h1>Tor window</h1>
+      </header>
+
+      <div id="status" class="status" data-state="starting" role="status">
+        <span class="status-dot"></span><span id="status-text">Starting Tor…</span>
+      </div>
+      <div class="progress"><div class="progress-bar"></div></div>
+      <p id="status-detail" class="status-detail"></p>
+      <div id="status-actions" class="status-actions" hidden>
+        <button id="retry" type="button">Try again</button>
+        <button id="bridges" type="button">Bridge settings</button>
+      </div>
+
+      <form id="search" class="search" role="search">
+        <input id="q" type="search" placeholder="Search with Cut Search, through Tor" aria-label="Search" autocomplete="off" autofocus />
+        <button type="submit" aria-label="Search">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5" /><path d="m10.4 10.4 3.6 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+        </button>
+      </form>
+
+      <ul class="facts">
+        <li>
+          <strong>Your IP address stays hidden</strong>
+          <span>Sites see a Tor address instead of yours. Your internet provider can see that you use Tor, but not where you go.</span>
+        </li>
+        <li>
+          <strong>.onion sites work</strong>
+          <span>And each site gets a Tor circuit of its own, so no single relay sees all the sites you visit.</span>
+        </li>
+        <li>
+          <strong>Nothing is kept</strong>
+          <span>History, cookies and site data are deleted when you close the last Tor window.</span>
+        </li>
+      </ul>
+
+      <p class="note">
+        Tor windows hide where you are, but they aren't Tor Browser, which also makes everyone look the same to the sites they visit. When your safety
+        depends on it, use <a href="https://www.torproject.org/download/">Tor Browser</a>.
+      </p>
+    </main>
+  </body>
+</html>

@@ -120,10 +120,16 @@ export function validateNetwork(input, base = NETWORK_DEFAULTS) {
   return { settings: out, errors };
 }
 
-// Seeds from environment variables, e.g. CUT_PROXY=socks5h://127.0.0.1:9050.
-function fromEnvironment() {
+// CUT_NETWORK_FIXED=1: the connection comes from the environment alone and
+// can't be changed from the settings page. Cut Browser's Tor windows run
+// their own Cut Search this way, so their searches always go through Tor.
+export const networkFixed = /^(1|true|yes)$/i.test(process.env.CUT_NETWORK_FIXED || '');
+
+// Seeds from environment variables, e.g. CUT_PROXY=socks5h://127.0.0.1:9050
+// or CUT_TOR=1 (Tor on 127.0.0.1:9050) or CUT_TOR=127.0.0.1:9150.
+export function fromEnvironment(env = process.env) {
   const seed = {};
-  const proxy = process.env.CUT_PROXY;
+  const proxy = env.CUT_PROXY;
   if (proxy) {
     try {
       const url = new URL(proxy);
@@ -143,13 +149,17 @@ function fromEnvironment() {
       console.warn('[cut] Ignoring CUT_PROXY: not a valid proxy URL');
     }
   }
-  if (/^(1|true|yes)$/i.test(process.env.CUT_TOR || '')) seed.mode = 'tor';
-  if (process.env.CUT_USER_AGENT && printable(process.env.CUT_USER_AGENT, 400)) Object.assign(seed, { userAgent: 'custom', customUserAgent: process.env.CUT_USER_AGENT });
-  if (process.env.CUT_DOH) {
-    const provider = process.env.CUT_DOH.toLowerCase();
+  const tor = (env.CUT_TOR || '').trim();
+  const torAddress = tor.match(/^\[?([^\]]+?)\]?:(\d{1,5})$/);
+  if (/^(1|true|yes)$/i.test(tor)) seed.mode = 'tor';
+  else if (torAddress && validHost(torAddress[1]) && validPort(Number(torAddress[2]))) Object.assign(seed, { mode: 'tor', torHost: torAddress[1], torPort: Number(torAddress[2]) });
+  else if (tor && !/^(0|false|no)$/i.test(tor)) console.warn('[cut] Ignoring CUT_TOR: use 1, or the address of Tor’s SOCKS port (host:port)');
+  if (env.CUT_USER_AGENT && printable(env.CUT_USER_AGENT, 400)) Object.assign(seed, { userAgent: 'custom', customUserAgent: env.CUT_USER_AGENT });
+  if (env.CUT_DOH) {
+    const provider = env.CUT_DOH.toLowerCase();
     if (provider === 'off') seed.doh = 'off';
     else if (DOH_PROVIDERS[provider]) Object.assign(seed, { doh: 'fallback', dohProvider: provider });
-    else if (httpsUrl(process.env.CUT_DOH)) Object.assign(seed, { doh: 'fallback', dohProvider: 'custom', dohUrl: httpsUrl(process.env.CUT_DOH) });
+    else if (httpsUrl(env.CUT_DOH)) Object.assign(seed, { doh: 'fallback', dohProvider: 'custom', dohUrl: httpsUrl(env.CUT_DOH) });
   }
   return seed;
 }
@@ -161,11 +171,14 @@ const listeners = new Set();
 function load() {
   let stored = {};
   try {
-    stored = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+    if (!networkFixed) stored = JSON.parse(fs.readFileSync(FILE, 'utf8'));
   } catch (err) {
     if (err.code !== 'ENOENT') console.warn(`[cut] Couldn't read ${FILE}: ${err.message}`);
   }
-  const { settings: valid } = validateNetwork({ ...stored, ...fromEnvironment() });
+  // A fixed Tor connection sends everything to Tor, local addresses included
+  // (Tor refuses those), rather than letting some requests go around it.
+  const fixed = networkFixed && fromEnvironment().mode === 'tor' ? { bypass: '' } : {};
+  const { settings: valid } = validateNetwork({ ...stored, ...fromEnvironment(), ...fixed });
   settings = valid;
   version++;
 }
@@ -178,6 +191,7 @@ export const onNetworkChange = (fn) => listeners.add(fn);
 // Applies the settings at once, then saves them. Returns false when they
 // couldn't be written (e.g. a read-only disk), so they last until restart.
 export function saveNetworkSettings(next) {
+  if (networkFixed) return false;
   settings = { ...next };
   version++;
   for (const fn of listeners) fn(settings);
@@ -213,6 +227,7 @@ export function describeNetwork(s = settings) {
 // Only the machine running Cut may change server-wide network settings, unless
 // the operator set CUT_ADMIN_TOKEN and the request carries it.
 export function canManageNetwork(req, form) {
+  if (networkFixed) return false;
   const token = process.env.CUT_ADMIN_TOKEN;
   const given = form?.get('admin_token');
   if (token && given) {

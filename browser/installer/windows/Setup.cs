@@ -121,10 +121,16 @@ namespace CutBrowserSetup
             }
         }
 
+        // Every process Cut Browser starts out of its own folder: the browser
+        // (a Tor window is a second copy of it), Cut Search, and Tor with its
+        // bridge client. tor and lyrebird come last so the browser is closed
+        // first: Tor then quits by itself, and nothing restarts it.
+        static readonly string[] RunningNames = { "cut", "cut-search", "tor", "lyrebird" };
+
         static IEnumerable<Process> RunningFrom(string dir)
         {
             var list = new List<Process>();
-            foreach (var name in new[] { "cut", "cut-search" })
+            foreach (var name in RunningNames)
             {
                 foreach (var p in Process.GetProcessesByName(name))
                 {

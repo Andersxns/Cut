@@ -33,6 +33,40 @@
   </html:label>
 </groupbox>
 
+<groupbox id="cutTorGroup" data-category="paneCut" hidden="true">
+  <label><html:h2>Tor windows</html:h2></label>
+  <description class="description-deemphasized">A Tor window sends everything through the Tor network, like Brave's private windows with Tor. Sites can't see your IP address, your internet provider can't see which sites you visit, and .onion sites work. Nothing from a Tor window is kept.</description>
+  <hbox class="cut-actions cut-tor-normal">
+    <button id="cutTorOpen" is="highlightable-button" label="New Tor window"/>
+  </hbox>
+  <html:div id="cutTorStatus" class="cut-status cut-tor-own" role="status"></html:div>
+  <hbox class="cut-actions cut-tor-own">
+    <button id="cutTorNewIdentity" is="highlightable-button" label="New identity"/>
+  </hbox>
+  <description class="description-deemphasized cut-tor-own">Settings for Tor windows are in the settings of a normal Cut Browser window.</description>
+  <html:div class="cut-pane-stack cut-tor-normal">
+    <html:moz-toggle id="cutTorEnabled" label="Tor windows" description="New Tor window in the menu, and Alt+Shift+N."></html:moz-toggle>
+    <html:moz-toggle id="cutTorOnions" label="Open .onion addresses in a Tor window" description=".onion sites can only be reached through Tor. Addresses you type go straight there; links on pages ask first."></html:moz-toggle>
+    <html:moz-toggle id="cutTorOnionLocation" label="Show when a site has an .onion address" description="Some sites name an .onion address of their own; .onion then appears in the address bar."></html:moz-toggle>
+    <html:moz-toggle id="cutTorPreferOnions" label="Go to .onion addresses by themselves in Tor windows"></html:moz-toggle>
+  </html:div>
+  <html:label class="cut-field cut-tor-normal" for="cutTorBridges">
+    <html:span>How Tor windows connect</html:span>
+    <html:select id="cutTorBridges">
+      <html:option value="">Directly to the Tor network</html:option>
+      <html:option value="obfs4">Through a built-in obfs4 bridge</html:option>
+      <html:option value="snowflake">Through Snowflake</html:option>
+      <html:option value="meek">Through meek</html:option>
+      <html:option value="custom">Through bridges I enter</html:option>
+    </html:select>
+  </html:label>
+  <html:label id="cutTorCustomField" class="cut-field cut-tor-normal" for="cutTorCustomBridges">
+    <html:span>Your bridges, one per line</html:span>
+    <html:textarea id="cutTorCustomBridges" rows="3" spellcheck="false" placeholder="obfs4 192.0.2.1:443 …"></html:textarea>
+  </html:label>
+  <description class="description-deemphasized cut-tor-normal">Bridges help where Tor is blocked. You can get bridges of your own from bridges.torproject.org. Changes apply the next time a Tor window connects.</description>
+</groupbox>
+
 <groupbox id="cutPrivacyGroup" data-category="paneCut" hidden="true">
   <label><html:h2>Privacy</html:h2></label>
   <html:ul class="cut-facts">

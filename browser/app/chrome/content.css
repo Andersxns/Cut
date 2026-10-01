@@ -103,9 +103,20 @@
     gap: 6px;
     margin-block-start: 16px;
 
-    & > input {
+    & > input,
+    & > select {
       max-width: 420px;
     }
+
+    & > textarea {
+      max-width: 560px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.9em;
+    }
+  }
+
+  .cut-status[data-state="connected"] {
+    border-inline-start: 3px solid light-dark(#17803a, #5cc27a);
   }
 
   .cut-facts {

@@ -12,6 +12,16 @@ pref("cut.ui.floatingUrlbar", true); // open the address bar as a centred palett
 pref("cut.ui.accent", "#e0552b");
 pref("cut.firstRun.done", false);
 
+// ---------- Tor windows (app/chrome/CutTor.sys.mjs) ----------
+
+pref("cut.tor.enabled", true); // "New Tor window" (Alt+Shift+N)
+pref("cut.tor.openOnions", true); // .onion addresses in normal windows open in a Tor window
+pref("cut.tor.onionLocation", true); // ".onion" in the address bar when a site has an .onion address
+pref("cut.tor.preferOnions", false); // in Tor windows, go to a site's .onion address by itself
+pref("cut.tor.bridges", ""); // "" (connect directly), "obfs4", "snowflake", "meek" or "custom"
+pref("cut.tor.customBridges", ""); // bridge lines, one per line, for "custom"
+pref("cut.tor.instance", false); // true only in the Tor window's own profile
+
 // ---------- Layout: vertical tabs, split view, no clutter ----------
 
 pref("sidebar.revamp", true);
