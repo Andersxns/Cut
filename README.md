@@ -108,7 +108,7 @@ Profiles live in `%APPDATA%\Cut` on Windows and `~/.cut` on Linux, separate from
 
 | Tab | Sources | Notes |
 | --- | --- | --- |
-| **All** (web) | DuckDuckGo, Bing, Wikipedia, Marginalia · optional Mwmbl, Wiby | Queried in parallel, merged by weighted reciprocal-rank fusion. Pages several engines agree on rise; duplicates fold together. |
+| **All** (web) | DuckDuckGo, Bing, Wikipedia, Marginalia · optional Mwmbl, Wiby | Queried in parallel, merged by weighted reciprocal-rank fusion. Pages several engines agree on rise, and so do pages that mention more of your search; duplicates fold together. An engine that answers for only one word of a longer search is left out. |
 | **Images** | DuckDuckGo → Bing fallback | Justified grid, lightbox, filters for size, color, type, layout and license. |
 | **Videos** | DuckDuckGo → YouTube fallback | Links straight to the host; players are never embedded. |
 | **News** | DuckDuckGo + Bing News | Blended and de-duplicated; sort by relevance or newest. |

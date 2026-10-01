@@ -44,6 +44,30 @@ export const significantTokens = (text) => {
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Words that say little about what a search is about: question words and
+// the like, on top of the stopwords.
+const WEAK_WORDS = new Set([
+  'how', 'what', 'why', 'when', 'where', 'who', 'which', 'whats', 'does', 'did', 'can', 'are', 'was', 'were', 'has', 'have', 'had',
+  'you', 'your', 'its', 'this', 'that', 'these', 'those', 'there', 'their', 'they', 'not', 'should', 'would', 'could', 'will',
+  'best', 'top', 'get', 'make', 'about', 'into', 'than', 'then', 'vs', 'versus',
+]);
+
+// The words a result should mention to be about a search: significant ones
+// of three letters or more, without question words. "how does overtime work
+// in valorant" → overtime, work, valorant.
+export function relevanceTerms(text) {
+  const terms = significantTokens(text).filter((t) => t.length >= 3);
+  const strong = terms.filter((t) => !WEAK_WORDS.has(t));
+  return strong.length ? strong : terms;
+}
+
+// The terms a piece of text mentions, each matched at the start of a word
+// ("league" in "leagues", not "art" in "start").
+export function mentionedTerms(text, terms) {
+  const haystack = String(text || '').toLowerCase();
+  return terms.filter((term) => new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(term)}`, 'u').test(haystack));
+}
+
 // Returns SafeHtml with query terms wrapped in <b>, everything else escaped.
 export function highlight(text, terms) {
   const source = String(text || '');

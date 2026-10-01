@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 
 import { html, raw, escapeHtml } from '../src/util/html.js';
 import { cleanUrl, urlKey, breadcrumb, isPublicHost } from '../src/util/url.js';
-import { highlight, formatBytes, parseSize, timeAgo, significantTokens } from '../src/util/text.js';
+import { highlight, formatBytes, parseSize, timeAgo, significantTokens, relevanceTerms, mentionedTerms } from '../src/util/text.js';
 import { calculate } from '../src/answers/calc.js';
 import { convertUnits } from '../src/answers/units.js';
 import { matchCurrency } from '../src/answers/currency.js';
 import { resolveBang, suggestBangs } from '../src/bangs.js';
 import { normalizeHash, buildMagnet, guessCategory, hashFromMagnet } from '../src/engines/torrents/common.js';
-import { mergeWeb, offTopic } from '../src/search/web.js';
+import { mergeWeb, offTopic, dropOutliers } from '../src/search/web.js';
 import { runEngines } from '../src/search/run.js';
 import { mergeTorrents, rankTorrents } from '../src/search/torrents.js';
 import { decodeBingUrl } from '../src/engines/web/bing.js';
@@ -161,6 +161,38 @@ test('an engine answering with unrelated results is set aside', () => {
   assert.equal(offTopic(good, 'rust ownership'), null);
   assert.equal(offTopic(junk.slice(0, 3), 'rust ownership'), null, 'too few results to judge');
   assert.equal(offTopic(junk, 'yt'), null, 'short queries are not judged');
+});
+
+test('an engine answering for one word of the search is left out', () => {
+  const result = (title, url = 'https://example.com/') => ({ title, snippet: '', url });
+  const outcome = (id, titles) => ({ engine: { id, weight: 1 }, ok: true, results: titles.map((t) => result(t)) });
+  // Bing's answer to traffic it takes for a bot: just the first word.
+  const bing = outcome('bing', ['Overtime Official Shop', 'Overtime pay - Department of Labor', 'Overtime - Wikipedia', 'OVERTIME | Cambridge Dictionary']);
+  const ddg = outcome('duckduckgo', ['Longest overtime in Rocket League history', 'Rocket League overtime explained', 'What is overtime in Rocket League?', 'Rocket League ranked overtime rules']);
+  const wiki = outcome('wikipedia', ['Rocket League - Wikipedia', 'Overtime (sports) - Wikipedia', 'Psyonix - Wikipedia']);
+  const kept = dropOutliers([bing, ddg, wiki], 'overtime in rocket league');
+  assert.deepEqual(kept.map((o) => (o.ok ? o.engine.id : `${o.engine.id}:${o.error}`)), ['bing:offtopic', 'duckduckgo', 'wikipedia']);
+  assert.deepEqual(dropOutliers([bing, ddg], 'overtime'), [bing, ddg], 'one-word searches are not judged');
+  // With two engines that disagree, there's nothing to tell which is right.
+  const other = outcome('marginalia', ['Rocket League', 'Rocket League patch notes', 'Rocket League review', 'Rocket League codes']);
+  assert.deepEqual(dropOutliers([bing, other], 'overtime in rocket league'), [bing, other]);
+});
+
+test('results that mention more of the search rank higher', () => {
+  const ddg = { id: 'duckduckgo', weight: 1 };
+  const outcomes = [
+    {
+      engine: ddg,
+      results: [
+        { url: 'https://shop.example/', title: 'Overtime Official Shop', snippet: 'Sports apparel' },
+        { url: 'https://example.com/rocket-league/longest-overtime', title: 'The longest overtime', snippet: 'in Rocket League history' },
+      ],
+    },
+  ];
+  assert.equal(mergeWeb(outcomes)[0].url, 'https://shop.example/', 'without a query, engine order stands');
+  assert.equal(mergeWeb(outcomes, 'overtime in rocket league')[0].url, 'https://example.com/rocket-league/longest-overtime');
+  assert.deepEqual(relevanceTerms('how does overtime work in valorant'), ['overtime', 'work', 'valorant']);
+  assert.deepEqual(mentionedTerms('Rocket Leagues, restart', ['league', 'art']), ['league'], 'terms match at the start of words');
 });
 
 test('torrents are merged by hash, filtered for relevance and safe search', () => {

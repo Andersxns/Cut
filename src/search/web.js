@@ -2,13 +2,17 @@ import { WEB_ENGINES } from '../engines/registry.js';
 import { cleanUrl, urlKey, hostname, parseUrl } from '../util/url.js';
 import { runEngines, summarize } from './run.js';
 import { applyResultPrefs } from '../privacy/results.js';
-import { significantTokens } from '../util/text.js';
+import { relevanceTerms, mentionedTerms } from '../util/text.js';
 
 // Weighted reciprocal-rank fusion. A page that several engines agree on
 // rises; a page only one engine ranks low stays low.
 const RRF_K = 6;
 
-export function mergeWeb(outcomes) {
+// What a result is judged on: its title, snippet and address (the address's
+// separators read as spaces, so /rocket-league/ counts).
+const resultText = (r) => `${r.title || ''} ${r.snippet || ''} ${String(r.url || '').replace(/[/._\-+=?&#:%]+/g, ' ')}`;
+
+export function mergeWeb(outcomes, query = '') {
   const byKey = new Map();
   for (const { engine, results } of outcomes) {
     results.forEach((result, rank) => {
@@ -35,9 +39,15 @@ export function mergeWeb(outcomes) {
   }
 
   const list = [...byKey.values()];
+  // Results that mention more of the search's words rank higher. One that
+  // mentions a single word of a longer search sinks: it's usually about
+  // something else that shares the word ("overtime pay" for "overtime in
+  // rocket league").
+  const terms = relevanceTerms(query);
   for (const entry of list) {
     if (!entry.title) entry.title = entry.siteName || hostname(entry.url);
     if (entry.engines.length > 1) entry.score *= 1 + 0.15 * (entry.engines.length - 1);
+    if (terms.length >= 2) entry.score *= 0.5 + (0.5 * mentionedTerms(resultText(entry), terms).length) / terms.length;
   }
   list.sort((a, b) => b.score - a.score);
 
@@ -57,13 +67,33 @@ export function mergeWeb(outcomes) {
 // error. An answer in which almost nothing mentions any word of the query is
 // treated as a failed request. Returns a reason, or null if it looks fine.
 export function offTopic(results, query) {
-  const terms = significantTokens(query).filter((t) => t.length >= 3);
+  const terms = relevanceTerms(query);
   if (!terms.length || results.length < 4) return null;
-  const onTopic = results.filter((r) => {
-    const text = `${r.title} ${r.snippet} ${r.url}`.toLowerCase();
-    return terms.some((t) => text.includes(t));
-  }).length;
+  const onTopic = results.filter((r) => mentionedTerms(resultText(r), terms).length).length;
   return onTopic / results.length < 0.2 ? `${results.length - onTopic} of ${results.length} results were unrelated to the query` : null;
+}
+
+// Bing also answers such traffic with results for just one word of the
+// search: "overtime in rocket league" gets overtime pay and sports apparel.
+// Those mention a word of the query, so they pass offTopic; but they never
+// mention words that the other engines' results are full of. An engine
+// whose answer misses such a word was answering a different search, and is
+// left out (unless every engine would be, when there's nothing to compare).
+export function dropOutliers(outcomes, query) {
+  const terms = relevanceTerms(query);
+  const answered = outcomes.filter((o) => o.ok && o.results.length >= 3);
+  if (terms.length < 2 || answered.length < 2) return outcomes;
+  const mentions = new Map(answered.map((o) => [o, o.results.map((r) => mentionedTerms(resultText(r), terms))]));
+  const outliers = new Set(
+    answered.filter((outcome) => {
+      const others = answered.filter((o) => o !== outcome).flatMap((o) => mentions.get(o));
+      if (others.length < 4) return false;
+      const own = mentions.get(outcome);
+      return terms.some((t) => !own.some((m) => m.includes(t)) && others.filter((m) => m.includes(t)).length >= 0.4 * others.length);
+    }),
+  );
+  if (!outliers.size || outliers.size === answered.length) return outcomes;
+  return outcomes.map((o) => (outliers.has(o) ? { ...o, ok: false, error: 'offtopic', results: [] } : o));
 }
 
 export async function searchWeb(ctx) {
@@ -82,10 +112,11 @@ export async function searchWeb(ctx) {
     },
     { validate: (results) => offTopic(results, ctx.query) },
   );
+  const kept = dropOutliers(outcomes, ctx.query);
   return {
-    results: applyResultPrefs(mergeWeb(outcomes), ctx.prefs, { rerank: true }),
-    sources: summarize(outcomes),
+    results: applyResultPrefs(mergeWeb(kept, ctx.query), ctx.prefs, { rerank: true }),
+    sources: summarize(kept),
     ms,
-    hasMore: outcomes.some((o) => o.ok && o.engine.paging && o.results.length >= 5),
+    hasMore: kept.some((o) => o.ok && o.engine.paging && o.results.length >= 5),
   };
 }

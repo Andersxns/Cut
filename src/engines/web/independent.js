@@ -1,5 +1,5 @@
 import { fetchUpstream } from '../../http.js';
-import { stripTags, squash } from '../../util/text.js';
+import { stripTags, squash, relevanceTerms, mentionedTerms } from '../../util/text.js';
 
 // Wikipedia and three independent, non-commercial indexes.
 
@@ -17,12 +17,19 @@ export const wikipedia = {
       action: 'query', list: 'search', srsearch: p.query, srlimit: '4', srprop: 'snippet|timestamp', format: 'json', utf8: '1',
     });
     const data = await fetchUpstream(url, { timeout: p.timeout, as: 'json', headers: { Accept: 'application/json' } });
-    return (data?.query?.search || []).map((item) => ({
-      url: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`,
-      title: `${item.title} - Wikipedia`,
-      snippet: squash(stripTags(item.snippet)),
-      siteName: 'Wikipedia',
-    }));
+    // Wikipedia searches the whole text of its articles, so a longer search
+    // also turns up articles that merely mention its words somewhere ("6-7"
+    // for "overtime fortnite"). Only articles whose title is about one of
+    // the words are kept.
+    const terms = relevanceTerms(p.query);
+    return (data?.query?.search || [])
+      .filter((item) => !terms.length || mentionedTerms(item.title, terms).length)
+      .map((item) => ({
+        url: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`,
+        title: `${item.title} - Wikipedia`,
+        snippet: squash(stripTags(item.snippet)),
+        siteName: 'Wikipedia',
+      }));
   },
 };
 
