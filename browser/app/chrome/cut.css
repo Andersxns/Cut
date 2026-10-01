@@ -65,6 +65,44 @@
   --color-accent-primary-hover: light-dark(#a93b16, #ffa07a);
   --color-accent-primary-active: light-dark(#8f3212, #ffb899);
   --button-text-color-primary: light-dark(#ffffff, #1a0e08);
+
+  /* Firefox's Nova design (Firefox 157 on) tints its surfaces lavender, draws
+   * a gradient across the window and a gradient ring round the selected tab,
+   * and renamed some of the tokens above. These keep Cut's greys and orange. */
+  --toolbox-background-image: none;
+  --toolbarbutton-icon-fill: light-dark(#4f4f55, #e4e4e8);
+  --toolbarbutton-background-color-hover: var(--cut-hover);
+  --toolbarbutton-background-color-active: var(--cut-press);
+  --tab-border-color-accent: none;
+  --tab-border-color-selected-leading: transparent;
+  --tab-border-color-selected-trailing: transparent;
+  --tab-close-button-background-color-hover: var(--cut-hover);
+  --tab-close-button-background-color-active: var(--cut-press);
+  --sidebar-divider-color: light-dark(#5b5b66, #fbfbfe);
+  --urlbar-box-background-color: var(--cut-hover);
+  --urlbar-box-background-color-focus: var(--cut-hover);
+  --urlbar-box-background-color-hover: var(--cut-press);
+  --urlbar-box-background-color-active: var(--cut-press);
+  --urlbarview-background-color-hover: var(--cut-hover);
+  --urlbarview-background-color-selected: var(--cut-press);
+  --urlbarview-text-color-secondary: var(--cut-text-2);
+  --urlbarview-separator-color: var(--cut-separator);
+  --urlbarview-action-button-background-color: var(--cut-hover);
+  --urlbarview-action-button-background-color-hover: var(--cut-press);
+  --button-background-color-hover: light-dark(#dcdce1, #48484f);
+  --button-background-color-active: light-dark(#c9c9d0, #5a5a62);
+  --button-background-color-ghost-hover: var(--cut-hover);
+  --button-background-color-ghost-active: var(--cut-press);
+  --uei-button-hover-bgcolor: var(--cut-hover);
+  --uei-button-active-bgcolor: var(--cut-press);
+  --panel-icon-fill: currentColor;
+  --panel-background-color: light-dark(#ffffff, #1c1c1f);
+  --panel-banner-item-hover-bgcolor: var(--cut-hover);
+  --panel-banner-item-active-bgcolor: var(--cut-press);
+  --info-bar-border-color: color-mix(in srgb, currentColor 24%, transparent);
+  --trustpanel-highlight-bg: light-dark(#fde5da, #3b2a23);
+  --trustpanel-inner-border: 1px solid light-dark(#f4b9a2, #6b3a28);
+  --promo-background-color-vibrant: light-dark(#fde5da, #3b2a23);
 }
 
 /* ---------- The frame ---------- */
@@ -232,30 +270,35 @@ sidebar-main {
   --urlbar-container-height: 36px !important;
 }
 
-#urlbar:not([breakout-extend]) .urlbar-background {
+#urlbar:not([popover-open]) .urlbar-background {
   border-radius: var(--cut-radius) !important;
 }
 
-#urlbar[focused]:not([breakout-extend]) .urlbar-background {
+#urlbar[focused]:not([popover-open]) .urlbar-background {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--cut-accent) 45%, transparent) !important;
 }
 
-/* Floating address bar: while you type, the address bar opens as a
- * palette in the middle of the window over a dimmed page. */
-:root[cut-floating-urlbar] #urlbar[breakout][breakout-extend]:popover-open {
+/* Floating address bar: while you type, the address bar opens as a palette
+ * in the middle of the window over a dimmed page. The input moves there, and
+ * Firefox's results list, which is anchored to it, follows. (Centered with
+ * margins, not a transform: anchoring ignores transforms.) */
+:root[cut-floating-urlbar] #urlbar[popover-open] {
   position: fixed !important;
-  inset-inline-start: 50% !important;
+  inset-inline: 0 !important;
   top: 16vh !important;
   width: min(760px, calc(100vw - 48px)) !important;
-  translate: -50% 0 !important;
-  margin: 0 !important;
+  margin-inline: auto !important;
+  z-index: 10 !important;
+  --urlbar-input-container-outline-open-focused: none;
+  --urlbar-background-box-shadow-open:
+    0 0 0 1px var(--cut-card-edge),
+    0 24px 64px rgb(0 0 0 / 0.35);
+}
 
-  .urlbar-background {
-    border-radius: 14px !important;
-    box-shadow:
-      0 0 0 1px var(--cut-card-edge),
-      0 24px 64px rgb(0 0 0 / 0.35) !important;
-  }
+/* The page area is stacked above the toolbar, so the toolbar comes forward
+ * while the palette is open. */
+:root[cut-floating-urlbar] #navigator-toolbox:has(#urlbar[popover-open]) {
+  z-index: 3 !important;
 }
 
 :root[cut-floating-urlbar][cut-urlbar-open] #tabbrowser-tabbox::after {
@@ -321,16 +364,6 @@ sidebar-main {
   &[cut-toolbar-peek] #navigator-toolbox,
   #navigator-toolbox:focus-within {
     transform: none;
-  }
-
-  /* The address bar is drawn in the top layer, outside the toolbar, so it
-   * has to be moved with it (Firefox does the same in fullscreen). */
-  &:not([cut-toolbar-peek]):not(:has(#navigator-toolbox:focus-within)) {
-    --toolbar-shift-translate: 0 calc(-1 * var(--cut-toolbox-height, 48px) - 8px);
-  }
-
-  #urlbar[breakout]:popover-open {
-    transition: translate 220ms var(--cut-ease);
   }
 
   #sidebar-container {

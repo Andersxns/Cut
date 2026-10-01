@@ -60,6 +60,21 @@
     --focus-outline-color: light-dark(#c4461c, #ff8a5c) !important;
   }
 
+  /* Firefox's Nova design fills the selected section with the accent color
+   * and gives buttons lavender hovers. Each component declares these tokens
+   * for itself, so they're set on the components too. */
+  :root,
+  moz-page-nav,
+  moz-page-nav-button,
+  moz-button {
+    --page-nav-button-background-color-selected: color-mix(in srgb, light-dark(#c4461c, #ff8a5c) 14%, transparent) !important;
+    --page-nav-button-text-color-selected: light-dark(#c4461c, #ff8a5c) !important;
+    --button-background-color-hover: color-mix(in srgb, light-dark(#c4461c, #ff8a5c) 12%, transparent) !important;
+    --button-background-color-active: color-mix(in srgb, light-dark(#c4461c, #ff8a5c) 20%, transparent) !important;
+    --button-background-color-ghost-hover: light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.08)) !important;
+    --button-background-color-ghost-active: light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.13)) !important;
+  }
+
   /* Cut Browser's defaults are its own, not an organisation's policy, and
    * Firefox's help site is for Firefox. */
   #policies-container,

@@ -195,14 +195,15 @@
     });
   }
 
-  // Dims the page while the floating address bar shows results.
+  // Dims the page while the floating address bar shows results (Firefox
+  // marks the address bar popover-open while its results list is showing).
   function setUpFloatingUrlbar() {
     const urlbar = document.getElementById("urlbar");
     if (!urlbar) {
       return;
     }
-    const update = () => root.toggleAttribute("cut-urlbar-open", urlbar.hasAttribute("breakout-extend") && urlbar.hasAttribute("open"));
-    new MutationObserver(update).observe(urlbar, { attributes: true, attributeFilter: ["breakout-extend", "open"] });
+    const update = () => root.toggleAttribute("cut-urlbar-open", urlbar.hasAttribute("popover-open"));
+    new MutationObserver(update).observe(urlbar, { attributes: true, attributeFilter: ["popover-open"] });
   }
 
   // The menu items and Alt+Shift+N for Tor windows (added to browser.xhtml
