@@ -845,6 +845,25 @@ html[data-density='compact'] .story {
   font-weight: 600;
 }
 
+/* Onion sites: Tor's layered mark where a site icon would be. */
+.result__onion {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  color: #8b5cf6;
+  vertical-align: -3px;
+}
+.result__seen {
+  margin: 4px 0 0;
+  color: var(--text-3);
+  font-size: 13px;
+}
+.onion-note {
+  margin: 0 0 20px;
+  color: var(--text-3);
+  font-size: 13.5px;
+}
+
 .more {
   margin-top: 32px;
 }

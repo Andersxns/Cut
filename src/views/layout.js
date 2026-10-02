@@ -10,6 +10,11 @@ export const TABS = [
   { id: 'torrents', name: 'Torrents' },
 ];
 
+// Onion sites can be searched when Cut connects through Tor, as it does in a
+// Cut Browser Tor window.
+const ONION_TAB = { id: 'onion', name: '.onion' };
+const tabsFor = (ctx) => (ctx.network?.mode === 'tor' ? [...TABS, ONION_TAB] : TABS);
+
 // Builds a search URL that keeps the explicit filters in the current URL.
 export function searchUrl(ctx, overrides = {}, { keepTypeParams = true } = {}) {
   const params = new URLSearchParams();
@@ -41,14 +46,15 @@ export function searchForm(ctx, { variant = 'bar', autofocus = false } = {}) {
       <ul class="ac" id="ac-${variant}" role="listbox" aria-label="Suggestions" hidden></ul>
     </div>
     ${hidden.map(([k, v]) => html`<input type="hidden" name="${k}" value="${v}">`)}
-    ${variant === 'hero' ? modePicker(ctx.prefs.home) : ''}
+    ${variant === 'hero' ? modePicker(ctx) : ''}
   </form>`;
 }
 
-function modePicker(selected) {
+function modePicker(ctx) {
+  const selected = ctx.prefs.home;
   return html`<fieldset class="modes">
     <legend class="sr-only">Search in</legend>
-    ${TABS.map(
+    ${tabsFor(ctx).map(
       (tab) => html`<label class="mode"><input type="radio" name="t" value="${tab.id}"${tab.id === selected ? html` checked` : ''}><span>${tab.id === 'web' ? 'Web' : tab.name}</span></label>`,
     )}
   </fieldset>`;
@@ -70,7 +76,7 @@ export function topbar(ctx, { tabs = true } = {}) {
 
 function tabBar(ctx) {
   return html`<nav class="tabs wrap" aria-label="Search type">
-    ${TABS.map(
+    ${tabsFor(ctx).map(
       (tab) => html`<a class="${cx('tab', ctx.type === tab.id && 'is-active')}" href="${searchUrl(ctx, { t: tab.id }, { keepTypeParams: false })}"${ctx.type === tab.id ? html` aria-current="page"` : ''}>${tab.name}</a>`,
     )}
     <a class="tab tab--end" href="/settings">Settings</a>

@@ -9,6 +9,7 @@ import { IMAGE_FILTERS } from '../engines/media/images.js';
 import { VIDEO_FILTERS } from '../engines/media/videos.js';
 import { engineName, sourceShort } from '../engines/registry.js';
 import { describeError } from '../http.js';
+import { AHMIA_ONION } from '../engines/onion/ahmia.js';
 import { imageSrc } from '../proxy.js';
 import { breadcrumb, hostname, urlKey } from '../util/url.js';
 import { highlight, formatBytes, timeAgo, formatNumber, formatCompact, formatDate, truncate, tokenize } from '../util/text.js';
@@ -53,21 +54,27 @@ function optionsFor(ctx, param, list, current) {
 }
 
 function filterBar(ctx) {
-  const items = [
-    dropdown({
-      value: ctx.region.name,
-      filterable: true,
-      active: ctx.region.code !== 'wt-wt',
-      options: REGIONS.map((r) => ({ label: r.name, href: searchUrl(ctx, { kl: r.code, p: undefined }), selected: r.code === ctx.region.code })),
-    }),
+  const items = [];
+  // Onion sites have no region.
+  if (ctx.type !== 'onion') {
+    items.push(
+      dropdown({
+        value: ctx.region.name,
+        filterable: true,
+        active: ctx.region.code !== 'wt-wt',
+        options: REGIONS.map((r) => ({ label: r.name, href: searchUrl(ctx, { kl: r.code, p: undefined }), selected: r.code === ctx.region.code })),
+      }),
+    );
+  }
+  items.push(
     dropdown({
       label: 'Safe search',
       value: SAFE_LEVELS.find((s) => s.id === ctx.safe).name,
       active: ctx.safe !== 'moderate',
       options: SAFE_LEVELS.map((s) => ({ label: s.name, href: searchUrl(ctx, { kp: s.id, p: undefined }), selected: s.id === ctx.safe })),
     }),
-  ];
-  if (ctx.type === 'web' || ctx.type === 'news' || ctx.type === 'torrents') {
+  );
+  if (ctx.type === 'web' || ctx.type === 'news' || ctx.type === 'torrents' || ctx.type === 'onion') {
     const ranges = ctx.type === 'news' ? TIME_RANGES.filter((r) => r.id !== 'y') : TIME_RANGES;
     items.push(
       dropdown({
@@ -117,20 +124,24 @@ function emptyState(ctx, data) {
   const failed = data.error || (data.sources?.length > 0 && data.sources.every((s) => !s.ok));
   const none = !data.error && data.sources?.length === 0;
   const alternatives =
-    ctx.type === 'torrents'
-      ? [['The Pirate Bay', `!tpb ${ctx.query}`], ['Internet Archive', `!ia ${ctx.query}`]]
-      : [['Google', `${ctx.query} !g`], ['Bing', `${ctx.query} !b`], ['Wikipedia', `${ctx.query} !w`]];
+    ctx.type === 'onion'
+      ? []
+      : ctx.type === 'torrents'
+        ? [['The Pirate Bay', `!tpb ${ctx.query}`], ['Internet Archive', `!ia ${ctx.query}`]]
+        : [['Google', `${ctx.query} !g`], ['Bing', `${ctx.query} !b`], ['Wikipedia', `${ctx.query} !w`]];
   return html`<div class="empty">
     ${
       none
         ? html`<p><strong>No sources are enabled.</strong> Turn some on in <a href="/settings">Settings</a>.</p>`
+        : failed && ctx.type === 'onion'
+          ? html`<p><strong>Ahmia, the onion search engine, didn’t answer.</strong> Onion services can be slow to reach. <a href="${searchUrl(ctx, {})}">Try again</a></p>`
         : failed && ctx.network.mode !== 'direct'
           ? html`<p><strong>None of the sources responded.</strong> Cut is set to connect ${ctx.network.mode === 'tor' ? 'through Tor' : 'through a proxy'}. Make sure it’s running, or check <a href="/settings#connection">connection settings</a>. <a href="${searchUrl(ctx, {})}">Try again</a></p>`
         : failed
           ? html`<p><strong>None of the sources responded.</strong> This is usually temporary. <a href="${searchUrl(ctx, {})}">Try again</a></p>`
           : html`<p>No results found for <strong>${ctx.query}</strong>.</p><p class="empty__hint">Check the spelling, try fewer or different words, or remove filters.</p>`
     }
-    <p class="empty__hint">Search elsewhere: ${alternatives.map(([name, query], i) => html`${i ? ' · ' : ''}<a href="/search?q=${encodeURIComponent(query)}">${name}</a>`)}</p>
+    ${alternatives.length ? html`<p class="empty__hint">Search elsewhere: ${alternatives.map(([name, query], i) => html`${i ? ' · ' : ''}<a href="/search?q=${encodeURIComponent(query)}">${name}</a>`)}</p>` : ''}
   </div>`;
 }
 
@@ -343,7 +354,43 @@ function videosContent(ctx, data) {
 
 // ---------- Page assembly ----------
 
-const CONTENT = { web: webContent, torrents: torrentsContent, images: imagesContent, news: newsContent, videos: videosContent };
+// ---------- Onion sites ----------
+
+// The whole address is shown, so it can be checked: copies of onion sites at
+// look-alike addresses are common.
+function onionResult(r, ctx) {
+  const crumb = breadcrumb(r.url);
+  return html`<li class="${cx('result', r.threat && 'result--danger')}" data-key="${urlKey(r.url)}">
+    <div class="result__url">${icon('onion', 'result__onion')}<span class="result__host">${crumb.host}</span>${crumb.parts.map((p) => html`<span class="result__path"> › ${p}</span>`)}${linkLabels(r)}</div>
+    <h2 class="result__title"><a href="${r.url}" rel="${rel(ctx)}"${targetAttr(ctx)} data-result-link>${r.title}</a></h2>
+    ${threatWarning(r)}
+    ${r.snippet ? html`<p class="result__snippet">${hl(truncate(r.snippet, 300), ctx)}</p>` : ''}
+    ${r.seen ? html`<p class="result__seen">Last seen online ${timeAgo(r.seen)}</p>` : ''}
+  </li>`;
+}
+
+// What a search plainly looking for sexual material involving children gets
+// instead of results.
+function abuseRefusal(ctx) {
+  const link = (href, text) => html`<a href="${href}" rel="${rel(ctx)}"${targetAttr(ctx)}>${text}</a>`;
+  return html`<div class="empty">
+    <p><strong>Cut Search doesn’t search for sexual material involving children.</strong> Viewing or sharing it is a crime, and it shows real children being abused.</p>
+    <p class="empty__hint">If you’ve come across such material, report it to the ${link('https://report.cybertip.org/', 'NCMEC CyberTipline')} or the ${link('https://report.iwf.org.uk/', 'Internet Watch Foundation')}. If you’re worried about your own thoughts or behaviour, ${link('https://www.stopitnow.org/', 'Stop It Now')} offers confidential help.</p>
+  </div>`;
+}
+
+function onionContent(ctx, data) {
+  if (data.unavailable) {
+    return html`<div class="empty"><p><strong>Onion sites can only be searched over Tor.</strong> Search from a Cut Browser Tor window, or connect Cut Search through Tor in <a href="/settings#connection">connection settings</a>.</p></div>`;
+  }
+  if (data.refused) return abuseRefusal(ctx);
+  if (!data.results.length) return emptyState(ctx, data);
+  return html`${ctx.page === 1 ? html`<p class="onion-note">Found by <a href="${AHMIA_ONION}/" rel="${rel(ctx)}"${targetAttr(ctx)}>Ahmia</a>. Sites with child sexual abuse material are left out.</p>` : ''}
+    <ol class="results" data-results>${data.results.map((r) => onionResult(r, ctx))}</ol>
+    ${moreButton(ctx, data.hasMore)}`;
+}
+
+const CONTENT = { web: webContent, torrents: torrentsContent, images: imagesContent, news: newsContent, videos: videosContent, onion: onionContent };
 
 // First chunk: everything up to the results, streamed before engines answer.
 export function searchShell(ctx) {
@@ -367,6 +414,6 @@ ${documentEnd(ctx)}`;
 
 // "More results" fragments: just the new items.
 export function resultsFragment(ctx, data) {
-  const render = { web: (r) => webResult(r, ctx), torrents: (t) => torrentRow(t, ctx), images: (img) => imageTile(img, ctx), news: (n) => newsItem(n, ctx), videos: (v) => videoCard(v, ctx) }[ctx.type];
+  const render = { web: (r) => webResult(r, ctx), torrents: (t) => torrentRow(t, ctx), images: (img) => imageTile(img, ctx), news: (n) => newsItem(n, ctx), videos: (v) => videoCard(v, ctx), onion: (r) => onionResult(r, ctx) }[ctx.type];
   return String(html`${data.results.map(render)}`);
 }

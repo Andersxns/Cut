@@ -83,6 +83,7 @@ Cut Browser is built on Firefox: the same engine, the same extensions and all of
   - uBlock Origin is installed on first run.
 - **Tor windows** (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>), like Brave's private windows with Tor. Everything in a Tor window goes through the Tor network, using the Tor that comes with Cut Browser: sites can't see your IP address, your internet provider can't see which sites you visit, and each site gets a Tor circuit of its own. Tor windows are always private, share nothing with your other windows, and search with Cut Search through Tor.
   - .onion addresses open in a Tor window from anywhere (a page's links to them ask first), and **.onion** appears in the address bar when a site has an .onion address of its own.
+  - Cut Search's **.onion** tab searches onion sites, with [Ahmia](https://ahmia.fi/). Sites with child sexual abuse material are left out (see [Onion sites](#onion-sites)).
   - **New identity** and **New Tor circuit for this site** are in the Tor button beside the address bar, and bridges (obfs4, Snowflake, meek or your own) help where Tor is blocked.
   - Tor windows hide where you are, but they aren't Tor Browser, which also makes everyone look the same to the sites they visit. When your safety depends on it, use [Tor Browser](https://www.torproject.org/download/).
 
@@ -113,12 +114,25 @@ Profiles live in `%APPDATA%\Cut` on Windows and `~/.cut` on Linux, separate from
 | **Videos** | DuckDuckGo → YouTube fallback | Links straight to the host; players are never embedded. |
 | **News** | DuckDuckGo + Bing News | Blended and de-duplicated; sort by relevance or newest. |
 | **Torrents** | The Pirate Bay, Nyaa, Torrents-CSV, Knaben, Internet Archive · optional BT4G | Merged by info hash, relevance-filtered, with seed health, category filters, sorting, magnet links and `.torrent` files where available. |
+| **.onion** (over Tor only) | Ahmia | Onion sites, with the full address and when each was last seen online. See [Onion sites](#onion-sites). |
 
 **Right Dao** is a free, independent search engine from the US with an index of its own, asked alongside the others. Its results are in English and can be a few years old, and since it has no safe search, it sits out searches with safe search set to *Strict*. Like Bing's and DuckDuckGo's, its robots.txt asks automated tools not to fetch its search pages; Cut Search asks it once for each search you make, like a browser would, and you can turn it off in *Settings → Search engines*.
 
 **Brave Search** has an index of its own, and Cut Search can ask it through its official API with a key of yours: make one at [Brave's Search API](https://brave.com/search/api/), then tick *Brave Search* in *Settings → Search engines* and paste the key. Brave's plans include $5 of credit a month, about 1,000 searches; it asks for a card to confirm who you are, but doesn't charge for the included credit. Brave sees your searches with your key, so it can link them to your Brave account. The key stays in Cut Search's cookie on your device and is never put in settings codes.
 
 <img src="docs/screenshots/search-torrents.png" alt="Cut Search torrent results for Big Buck Bunny" width="820">
+
+### Onion sites
+
+When Cut Search connects through Tor, as it does in Cut Browser's Tor windows, a **.onion** tab searches onion sites. Cut Search asks [Ahmia](https://ahmia.fi/), the search engine for onion services, at Ahmia's own onion address, and links straight to each site (not through Ahmia's click counter). Each result shows the site's whole address, since copies of onion sites at look-alike addresses are common, and when Ahmia last found it online.
+
+Sites with child sexual abuse material are left out, three ways:
+
+- Ahmia bans them from its index.
+- Ahmia publishes the banned sites, as MD5 sums of their addresses, for other search engines to filter with; Cut Search fetches that list over Tor twice a day and drops every result on it.
+- Searches plainly looking for such material get no results, only where to report it ([NCMEC CyberTipline](https://report.cybertip.org/), [Internet Watch Foundation](https://report.iwf.org.uk/)) or get confidential help ([Stop It Now](https://www.stopitnow.org/)), and results described in those terms are dropped.
+
+With safe search set to *Strict*, sexual results are left out too.
 
 Also included:
 

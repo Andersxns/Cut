@@ -42,10 +42,10 @@ Before opening a pull request, run `npm test`. The [Build workflow](.github/work
 | --- | --- |
 | `server.js` | The HTTP server. It never logs requests. |
 | `src/app.js` | Routing, streaming results pages, settings and security headers. |
-| `src/engines/` | One module per upstream source: `web/`, `media/` (images, videos and news) and `torrents/`, listed in `registry.js`. |
-| `src/search/` | Runs engines in parallel within time limits, merges web results by rank fusion and torrents by info hash. |
+| `src/engines/` | One module per upstream source: `web/`, `media/` (images, videos and news), `torrents/` and `onion/` (Ahmia, over Tor), listed in `registry.js` (all but Ahmia). |
+| `src/search/` | Runs engines in parallel within time limits, merges web results by rank fusion and torrents by info hash, and searches onion sites (`onion.js`). |
 | `src/answers/` | Instant answers (calculator, units, currency, weather, dictionary…) and the knowledge panel. |
-| `src/privacy/` | Link cleaning, privacy-friendly front-ends and the dangerous-site lists. |
+| `src/privacy/` | Link cleaning, privacy-friendly front-ends, the dangerous-site lists, and keeping child sexual abuse material out of onion search (`abuse.js`). |
 | `src/net/` | Proxies, the SOCKS client, Tor circuit isolation and DNS over HTTPS. |
 | `src/views/` | Server-rendered HTML, with template tags that escape everything by default. |
 | `src/bangs.js` | The !bang shortcuts. |

@@ -77,6 +77,7 @@ const PATHS = {
   filter: '<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>',
   alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  onion: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="5.8"/><circle cx="12" cy="12" r="2.2"/>',
 };
 
 export function icon(name, className = '') {

@@ -18,6 +18,7 @@ import { searchWeb } from './search/web.js';
 import { graceFor, within } from './search/run.js';
 import { searchTorrents, SORT_IDS } from './search/torrents.js';
 import { searchMedia } from './search/media.js';
+import { searchOnion, prepareOnionSearch } from './search/onion.js';
 import { getInstantAnswer } from './answers/index.js';
 import { getInfobox } from './answers/infobox.js';
 import { resolveBang, suggestBangs } from './bangs.js';
@@ -33,7 +34,7 @@ import { settingsPage } from './views/settings.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
-const TYPES = ['web', 'images', 'videos', 'news', 'torrents'];
+const TYPES = ['web', 'images', 'videos', 'news', 'torrents', 'onion'];
 
 // ---------- Security headers ----------
 
@@ -378,6 +379,7 @@ const STANDALONE_ANSWERS = new Set(['calc', 'units', 'currency', 'weather', 'clo
 
 function runSearch(ctx) {
   return upstreamScope(ctx.prefs, async () => {
+    prepareOnionSearch(ctx.network);
     const data = await searchFor(ctx);
     if (ctx.fx.favicons && ['web', 'news', 'videos'].includes(ctx.type)) warmFavicons(data.results.map((r) => hostname(r.url)));
     return data;
@@ -386,6 +388,7 @@ function runSearch(ctx) {
 
 async function searchFor(ctx) {
   if (ctx.type === 'torrents') return searchTorrents(ctx);
+  if (ctx.type === 'onion') return searchOnion(ctx);
   if (ctx.type !== 'web') return searchMedia(ctx.type, ctx);
   const extras = ctx.page === 1 && !ctx.fragment;
   const started = Date.now();

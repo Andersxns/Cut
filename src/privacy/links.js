@@ -147,9 +147,11 @@ export function cleanLink(href, prefs) {
   if (prefs.unwrap !== false) url = unwrap(url);
   if (prefs.amp !== false) url = deAmp(url);
   url = stripParams(url, prefs.strip || 'known');
-  if (url.protocol === 'http:' && prefs.https === 'upgrade' && !/^(localhost|127\.|\[::1\])/.test(url.hostname)) url.protocol = 'https:';
+  // Onion sites are encrypted end to end by Tor, and most don't serve HTTPS.
+  const onion = url.hostname.endsWith('.onion');
+  if (url.protocol === 'http:' && prefs.https === 'upgrade' && !onion && !/^(localhost|127\.|\[::1\])/.test(url.hostname)) url.protocol = 'https:';
   url = frontend(url, prefs);
-  return { url: url.toString(), insecure: url.protocol === 'http:' && prefs.https === 'mark' };
+  return { url: url.toString(), insecure: url.protocol === 'http:' && prefs.https === 'mark' && !onion };
 }
 
 // Advertising and tracking domains hidden by "Hide results from ad and tracking domains".
