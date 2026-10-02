@@ -150,7 +150,9 @@ test('a stalled minor engine does not hold up the page', async () => {
   ]);
   assert.ok(main.ms < 1500, `returned after ${main.ms} ms`);
   assert.deepEqual(status(main), ['ok', 'captcha', 'ok', 'late']);
-  assert.ok(empty.ms >= 1200);
+  // Waited for the 1.2 s engine instead of stopping after the grace period
+  // (0.8 s); timers can fire a millisecond early, so not exactly 1200.
+  assert.ok(empty.ms >= 1100, `returned after ${empty.ms} ms`);
   assert.deepEqual(status(empty), ['captcha', 'ok']);
   assert.deepEqual(status(none), ['ok', 'ok', 'late']);
 });
