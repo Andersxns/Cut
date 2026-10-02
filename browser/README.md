@@ -124,10 +124,22 @@ Mozilla's updater would replace Cut Browser with plain Firefox, so it's
 removed. **Security fixes come as new Cut Browser releases** instead: each
 release is built on the newest Firefox release (Mozilla ships one about every
 four weeks, with security fixes in between) and the Tor from the newest Tor
-Browser, and a workflow checks every day for newer ones. Installing a new
-version over the old one keeps your profile. *Settings → Cut Browser* and the
-About dialog show the Firefox version you're on. If you build Cut Browser
-yourself, `node build.mjs` always fetches the newest Firefox and Tor.
+Browser, and a workflow checks every day for newer ones.
+
+Cut Browser updates itself to new releases (`app/chrome/CutUpdate.sys.mjs`).
+Two minutes after it starts, and every six hours, it asks GitHub's API for the
+newest release. On Windows, if that's newer than `cut.version`, it streams the
+release's `Cut-Browser-<version>-Setup-x64.exe` to the temp folder, checks its
+SHA-256 against the release's `SHA256SUMS.txt`, and shows **Restart to
+update** in the menu. When the browser quits, it runs that installer with
+`/Update /D=<its folder> /WaitFor=<its process>` (plus `/Relaunch` after
+"Restart to update"): the installer unpacks the new version beside the old,
+waits until every Cut Browser process from that folder has exited (Tor
+windows included; nothing is closed for it), and swaps the folders, keeping
+the profile. On Linux, and on Windows copies not installed with the installer,
+it only says in Settings that a new version is out. *Settings → Cut Browser*
+shows the update status and the Firefox version you're on. If you build Cut
+Browser yourself, `node build.mjs` always fetches the newest Firefox and Tor.
 
 ## Build
 
@@ -165,7 +177,8 @@ Firefox (which takes hours and tens of gigabytes):
    adds Cut's interface (`app/chrome/`), default prefs (`app/prefs/cut.js`) and
    the Settings pane (`app/preferences/`).
 3. Mozilla's updater, crash reporter and telemetry senders are left out;
-   `app/policies.json` turns off updates and installs uBlock Origin.
+   `app/policies.json` turns off Mozilla's updates and installs uBlock
+   Origin. Cut Browser updates itself instead (see Updates above).
 4. Cut Search (this repository's server plus Node's runtime) is bundled in
    `cut-search/` and started by `app/chrome/CutBrowser.sys.mjs`.
 5. Tor and lyrebird, from the Tor expert bundle of the newest Tor Browser, go

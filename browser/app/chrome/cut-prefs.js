@@ -9,6 +9,7 @@
 (() => {
   const { CutSearch, CutBrowser } = ChromeUtils.importESModule("resource://cut/CutBrowser.sys.mjs");
   const { CutTor } = ChromeUtils.importESModule("resource://cut/CutTor.sys.mjs");
+  const { CutUpdate } = ChromeUtils.importESModule("resource://cut/CutUpdate.sys.mjs");
 
   const TOGGLES = {
     cutCompact: { pref: "cut.ui.compact", fallback: false },
@@ -19,6 +20,36 @@
     cutTorOnions: { pref: "cut.tor.openOnions", fallback: true },
     cutTorOnionLocation: { pref: "cut.tor.onionLocation", fallback: true },
     cutTorPreferOnions: { pref: "cut.tor.preferOnions", fallback: false },
+    cutUpdateEnabled: { pref: "cut.update.enabled", fallback: true },
+  };
+
+  // "3 hours ago"
+  const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  function ago(time) {
+    const minutes = Math.round((time - Date.now()) / 60000);
+    if (minutes > -1) {
+      return "just now";
+    }
+    if (minutes > -60) {
+      return relative.format(minutes, "minute");
+    }
+    const hours = Math.round(minutes / 60);
+    return hours > -24 ? relative.format(hours, "hour") : relative.format(Math.round(hours / 24), "day");
+  }
+
+  const UPDATE_STATES = {
+    idle: s =>
+      !CutUpdate.enabled
+        ? `Cut Browser ${CutUpdate.current}. Automatic updates are off.`
+        : s.checkedAt
+          ? `Cut Browser ${CutUpdate.current} is up to date. Checked ${ago(s.checkedAt)}.`
+          : `Cut Browser ${CutUpdate.current}. It checks for updates a few minutes after it starts.`,
+    checking: () => "Checking for updates…",
+    latest: s => `Cut Browser ${CutUpdate.current} is up to date. Checked ${ago(s.checkedAt)}.`,
+    downloading: s => `Downloading Cut Browser ${s.version}… ${Math.round((s.progress || 0) * 100)}%`,
+    ready: s => `Cut Browser ${s.version} is ready. It installs when you close Cut Browser.`,
+    manual: s => (s.error ? `Cut Browser ${s.version} ${s.error}. You can download it from GitHub.` : `Cut Browser ${s.version} is out.`),
+    failed: s => `Couldn't check for updates: ${s.error}.`,
   };
 
   const TOR_STATES = {
@@ -75,7 +106,8 @@
       document.getElementById("cutOpenPrivacy").addEventListener("command", () => gotoPref("panePrivacy"));
 
       const version = document.getElementById("cutVersion");
-      version.textContent = `Cut Browser, built on Firefox ${Services.appinfo.version}. Firefox is a trademark of the Mozilla Foundation; Cut Browser is not affiliated with Mozilla. The Firefox source code is available under the Mozilla Public License 2.0.`;
+      version.textContent = `Cut Browser ${CutUpdate.current}, built on Firefox ${Services.appinfo.version}. Firefox is a trademark of the Mozilla Foundation; Cut Browser is not affiliated with Mozilla. The Firefox source code is available under the Mozilla Public License 2.0.`;
+      this.initUpdates();
 
       const update = () => this.showStatus(CutSearch.state);
       Services.obs.addObserver(update, "cut-search-state-changed");
@@ -83,6 +115,36 @@
       CutSearch.whenReady().then(update);
       update();
       this.initTor();
+    },
+
+    // Updates (CutUpdate.sys.mjs). Where the installer can't update Cut
+    // Browser (Linux), it only says when a new version is out.
+    initUpdates() {
+      const status = document.getElementById("cutUpdateStatus");
+      const restart = document.getElementById("cutUpdateRestart");
+      const download = document.getElementById("cutUpdateDownload");
+      const check = document.getElementById("cutUpdateCheck");
+      if (!CutUpdate.canInstall) {
+        document.getElementById("cutUpdateEnabled").description = "Cut Browser asks GitHub for new versions every six hours, and says so here when one is out.";
+      }
+      const show = () => {
+        const s = CutUpdate.state;
+        status.textContent = (UPDATE_STATES[s.status] || UPDATE_STATES.idle)(s);
+        status.dataset.state = s.status;
+        restart.hidden = s.status != "ready";
+        download.hidden = s.status != "manual";
+        check.disabled = s.status == "checking" || s.status == "downloading";
+      };
+      Services.obs.addObserver(show, CutUpdate.STATE_TOPIC);
+      Services.prefs.addObserver("cut.update.enabled", show);
+      window.addEventListener("unload", () => {
+        Services.obs.removeObserver(show, CutUpdate.STATE_TOPIC);
+        Services.prefs.removeObserver("cut.update.enabled", show);
+      });
+      check.addEventListener("command", () => CutUpdate.check({ manual: true }));
+      restart.addEventListener("command", () => CutUpdate.restartNow());
+      download.addEventListener("command", () => openTrustedLinkIn(CutUpdate.state.url || "https://github.com/Andersxns/Cut/releases/latest", "tab"));
+      show();
     },
 
     // Tor windows: opened and set up from a normal window; a Tor window's

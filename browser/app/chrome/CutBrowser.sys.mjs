@@ -9,6 +9,7 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
   CutTor: "resource://cut/CutTor.sys.mjs",
+  CutUpdate: "resource://cut/CutUpdate.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   Subprocess: "resource://gre/modules/Subprocess.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
@@ -322,6 +323,7 @@ export const CutBrowser = {
     this._registerContentStyles();
     // Before Cut Search starts: in a Tor window, it needs Tor's port.
     lazy.CutTor.init();
+    lazy.CutUpdate.init();
     // The engine is registered straight away on the expected address, so
     // even the first search goes to Cut; if the server has to use another
     // port, the engine follows it once the server is up.

@@ -25,12 +25,12 @@ function replaceFluent(text, id, definition, name) {
 }
 
 // The About dialog, told the truth: Cut Browser, built on Firefox, updated
-// by new Cut Browser builds rather than by Mozilla.
+// by Cut Browser itself rather than by Mozilla.
 function aboutDialogStrings(text) {
   const name = 'aboutDialog.ftl';
   text = replaceFluent(text, 'aboutDialog-version', `aboutDialog-version = Cut Browser ${PRODUCT.version} · Firefox { $version } ({ $bits }-bit)`, name);
   text = replaceFluent(text, 'aboutdialog-version-arch', `aboutdialog-version-arch = Cut Browser ${PRODUCT.version} · Firefox { $version } ({ $arch })`, name);
-  text = replaceFluent(text, 'update-policy-disabled', 'update-policy-disabled = Security fixes arrive with new Cut Browser builds.', name);
+  text = replaceFluent(text, 'update-policy-disabled', 'update-policy-disabled = Cut Browser updates itself: see Settings › Cut Browser.', name);
   text = replaceFluent(
     text,
     'community-2',
@@ -103,7 +103,8 @@ export function patchBrowserOmni(file, { appDir }) {
     if (!entries.has(name) && !name.startsWith('chrome/browser/content/branding/')) throw new Error(`${name} is missing from browser/omni.ja`);
     put(name, data);
   }
-  put('defaults/preferences/cut.js', fs.readFileSync(path.join(appDir, 'prefs', 'cut.js')));
+  // Cut Browser's own version, which the updater compares with new releases.
+  put('defaults/preferences/cut.js', `${fs.readFileSync(path.join(appDir, 'prefs', 'cut.js'), 'utf8').trimEnd()}\n\npref("cut.version", "${PRODUCT.version}");\n`);
 
   const chromeDir = path.join(appDir, 'chrome');
   for (const rel of walk(chromeDir)) put(CUT_CHROME + rel, fs.readFileSync(path.join(chromeDir, rel)));

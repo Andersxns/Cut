@@ -22,6 +22,12 @@ pref("cut.tor.bridges", ""); // "" (connect directly), "obfs4", "snowflake", "me
 pref("cut.tor.customBridges", ""); // bridge lines, one per line, for "custom"
 pref("cut.tor.instance", false); // true only in the Tor window's own profile
 
+// ---------- Updates (app/chrome/CutUpdate.sys.mjs) ----------
+// cut.version, Cut Browser's own version, is added by the build.
+
+pref("cut.update.enabled", true); // check GitHub every six hours; on Windows, download new versions and install them when Cut Browser closes
+pref("cut.update.url", "https://api.github.com/repos/Andersxns/Cut/releases/latest");
+
 // ---------- Layout: vertical tabs, split view, no clutter ----------
 
 pref("sidebar.revamp", true);

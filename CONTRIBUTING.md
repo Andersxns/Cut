@@ -88,6 +88,8 @@ Before opening a pull request, run `npm test`. The [Build workflow](.github/work
 
 Releases are Cut Browser releases, numbered by `version` in `browser/package.json`. Update it, write the release notes in `docs/releases/v1.0.1.md` (see the earlier versions there), commit, then push a tag such as `v1.0.1`. The Build workflow builds the Windows installer and the Linux packages on the newest Firefox release, with the Tor from the newest Tor Browser, and publishes them as a GitHub release with checksums. In the notes, `<!-- firefox -->` becomes the Firefox version the release is built on, and `<!-- tor -->` the Tor Browser version its Tor comes from.
 
+Installed copies update themselves to the newest release within six hours (on Windows they install it; on Linux they say it's out), so publishing a release ships it to everyone. The updater relies on the release's tag (`v<version>`, higher than the last), its asset names (`Cut-Browser-<version>-Setup-x64.exe`) and `SHA256SUMS.txt`, which the workflow produces. It reads GitHub's latest release, which skips drafts and pre-releases.
+
 Cut Browser doesn't update itself from Mozilla, so **every Firefox security release needs a Cut Browser release**, and so does every Tor security release. The [Firefox and Tor updates workflow](.github/workflows/firefox-updates.yml) checks every day and opens an issue when there's a Firefox or a Tor Browser newer than the latest release; publishing a new version is all it takes.
 
 When code signing is set up, the workflow sends the Windows installer to SignPath and waits up to four hours for an approver to approve the signing request in SignPath, then publishes the release with the signed installer. If nobody approves it in time, re-run the failed jobs once you can.

@@ -56,7 +56,13 @@ To install without questions, run `Cut-Browser-<version>-Setup-x64.exe /S`, opti
 
 ### Updates
 
-Cut Browser doesn't update itself from Mozilla, because Mozilla's updates would turn it back into plain Firefox. Security fixes come as new Cut Browser releases instead, built on each new Firefox and Tor release: install the new version over the old one and your bookmarks, history and settings stay. **Menu → Help → About Cut** shows the Firefox version you're on. To hear about new versions, choose **Watch → Custom → Releases** at the top of this page.
+Cut Browser doesn't update from Mozilla, because Mozilla's updates would turn it back into plain Firefox. Security fixes come as new Cut Browser releases instead, built on each new Firefox and Tor release, and **from version 1.2, Cut Browser installs them itself**:
+
+- On Windows, it asks GitHub for new releases every six hours, downloads a new version in the background, checks it against the release's checksums, and installs it when you close Cut Browser. Your bookmarks, history and settings stay. **Restart to update** in the menu installs it straight away and reopens your tabs.
+- On Linux, *Settings → Cut Browser* tells you when a new version is out; install it the way you installed Cut Browser.
+- *Settings → Cut Browser → Updates* shows what it's doing, and can turn automatic updates off.
+
+Versions before 1.2 don't update themselves: install 1.2 or later over them once, and from then on Cut Browser keeps itself up to date. **Menu → Help → About Cut** shows the Firefox version you're on.
 
 ## Cut Browser
 
@@ -379,7 +385,7 @@ Signing starts once SignPath Foundation has accepted the project. Releases publi
 - **Committers and reviewers:** [Andersxns](https://github.com/Andersxns). Changes from other contributors are reviewed by a committer before they are merged.
 - **Approvers:** [Andersxns](https://github.com/Andersxns). Every release is approved in SignPath before it is signed.
 
-**Privacy:** Cut Browser and Cut Search have no telemetry, ads or usage statistics, and send nothing about you anywhere you haven't asked them to. Cut Search contacts search engines only when you search, and a Tor window connects to the Tor network only once you open one. Like Firefox, Cut Browser also keeps its security lists up to date on its own (Safe Browsing, certificate revocations and add-on blocklists), updates uBlock Origin and its filter lists, and installs uBlock Origin from addons.mozilla.org the first time it starts.
+**Privacy:** Cut Browser and Cut Search have no telemetry, ads or usage statistics, and send nothing about you anywhere you haven't asked them to. Cut Search contacts search engines only when you search, and a Tor window connects to the Tor network only once you open one. Cut Browser asks GitHub for new versions every six hours, without cookies (you can turn this off in *Settings → Cut Browser*). Like Firefox, Cut Browser also keeps its security lists up to date on its own (Safe Browsing, certificate revocations and add-on blocklists), updates uBlock Origin and its filter lists, and installs uBlock Origin from addons.mozilla.org the first time it starts.
 
 ## License
 

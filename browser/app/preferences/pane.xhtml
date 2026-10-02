@@ -80,6 +80,18 @@
   </hbox>
 </groupbox>
 
+<groupbox id="cutUpdateGroup" data-category="paneCut" hidden="true">
+  <label><html:h2>Updates</html:h2></label>
+  <html:div id="cutUpdateStatus" class="cut-status cut-tor-normal" role="status"></html:div>
+  <hbox class="cut-actions cut-tor-normal">
+    <button id="cutUpdateRestart" is="highlightable-button" label="Restart to update" hidden="true"/>
+    <button id="cutUpdateDownload" is="highlightable-button" label="Download from GitHub" hidden="true"/>
+    <button id="cutUpdateCheck" is="highlightable-button" label="Check for updates"/>
+  </hbox>
+  <html:moz-toggle id="cutUpdateEnabled" class="cut-tor-normal" label="Update Cut Browser automatically" description="New versions download in the background and install when you close Cut Browser. It asks GitHub for them every six hours."></html:moz-toggle>
+  <description class="description-deemphasized cut-tor-own">Tor windows are updated with the rest of Cut Browser.</description>
+</groupbox>
+
 <groupbox id="cutAboutGroup" data-category="paneCut" hidden="true">
   <label><html:h2>About</html:h2></label>
   <description id="cutVersion" class="description-deemphasized"></description>

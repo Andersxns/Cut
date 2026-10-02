@@ -98,8 +98,14 @@
     background: light-dark(rgb(0 0 0 / 0.04), rgb(255 255 255 / 0.06));
 
     &[data-state="running"],
-    &[data-state="remote"] {
+    &[data-state="remote"],
+    &[data-state="latest"],
+    &[data-state="ready"] {
       border-inline-start: 3px solid light-dark(#17803a, #5cc27a);
+    }
+
+    &[data-state="manual"] {
+      border-inline-start: 3px solid light-dark(#c4461c, #ff8a5c);
     }
 
     &[data-state="failed"] {

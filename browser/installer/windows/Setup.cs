@@ -8,7 +8,14 @@
 // Installs per user into %LOCALAPPDATA%\Programs\Cut Browser, so it never
 // asks for administrator rights. Command line:
 //   Setup.exe [/S] [/D=<folder>] [/NoShortcut] [/NoLaunch]
+//   Setup.exe /Update /D=<folder> [/WaitFor=<pid>] [/Relaunch]
 //   uninstall.exe [/S] [/RemoveData]
+//
+// /Update is how Cut Browser updates itself (app/chrome/CutUpdate.sys.mjs):
+// silently, after the browser with process ID <pid> has quit, and once every
+// Cut Browser window (Tor windows too) has closed. Nothing is closed for it,
+// except with /Relaunch ("Restart to update"), which also starts the new
+// version afterwards.
 
 using System;
 using System.Collections.Generic;
@@ -63,6 +70,9 @@ namespace CutBrowserSetup
         public bool RemoveData;
         public bool DesktopShortcut = true;
         public bool Launch = true;
+        public bool Update;
+        public bool Relaunch;
+        public int WaitFor;
         public string InstallDir;
         public string TempUninstallFor; // set when the uninstaller runs from %TEMP%
 
@@ -82,6 +92,15 @@ namespace CutBrowserSetup
                 else if (lower == "/nolaunch") o.Launch = false;
                 else if (lower.StartsWith("/d=")) o.InstallDir = a.Substring(3).Trim('"');
                 else if (lower.StartsWith("/uninstall-for=")) { o.Uninstall = true; o.TempUninstallFor = a.Substring(15).Trim('"'); }
+                else if (lower == "/update") o.Update = true;
+                else if (lower == "/relaunch") o.Relaunch = true;
+                else if (lower.StartsWith("/waitfor=")) int.TryParse(a.Substring(9), out o.WaitFor);
+            }
+            if (o.Update)
+            {
+                o.Silent = true;
+                // An update keeps the shortcuts you have: the desktop one only if it's there.
+                o.DesktopShortcut = File.Exists(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), Product.Name + ".lnk"));
             }
             if (o.Silent) o.Launch = false;
             return o;
@@ -174,6 +193,63 @@ namespace CutBrowserSetup
             }
         }
 
+        // An update waits for the browser that started it to quit (so it can
+        // save your session), then for every other Cut Browser window, Tor
+        // windows too, to be closed: for up to a day. After "Restart to update"
+        // (/Relaunch) the rest are closed instead.
+        public static bool WaitUntilClosed(string dir, Options options)
+        {
+            if (options.WaitFor > 0)
+            {
+                try
+                {
+                    using (var browser = Process.GetProcessById(options.WaitFor))
+                    {
+                        if (browser.MainModule.FileName.StartsWith(dir + "\\", StringComparison.OrdinalIgnoreCase)) browser.WaitForExit(600000);
+                    }
+                }
+                catch
+                {
+                    // Already gone.
+                }
+            }
+            if (options.Relaunch) CloseRunning(dir);
+            var deadline = DateTime.UtcNow.AddDays(1);
+            while (IsRunning(dir))
+            {
+                if (DateTime.UtcNow > deadline) return false;
+                Thread.Sleep(2000);
+            }
+            return true;
+        }
+
+        // Swaps the new version in. Windows lets a folder be moved while a
+        // program in it runs (which would break that program), so a copy
+        // started in the meantime is waited for first.
+        public static void SwapIn(string dir, string staging, string previous)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                if (!WaitUntilClosed(dir, new Options())) throw new TimeoutException("Cut Browser didn't close, so the update wasn't installed.");
+                try
+                {
+                    if (Directory.Exists(dir)) Directory.Move(dir, previous);
+                    Directory.Move(staging, dir);
+                    return;
+                }
+                catch
+                {
+                    // If only the first move happened, the old version goes back.
+                    if (!Directory.Exists(dir) && Directory.Exists(previous))
+                    {
+                        try { Directory.Move(previous, dir); } catch { }
+                    }
+                    if (attempt >= 5) throw;
+                    Thread.Sleep(3000); // e.g. a virus scanner still reading the new files
+                }
+            }
+        }
+
         // Extracts the embedded browser next to the install folder, then swaps
         // it in, so a failed install never leaves a half-updated browser.
         public static void Install(string dir, Options options, Action<double, string> progress)
@@ -213,10 +289,18 @@ namespace CutBrowserSetup
                 }
             }
 
-            progress(0.92, "Closing the old version…");
-            CloseRunning(dir);
-            if (Directory.Exists(dir)) Directory.Move(dir, previous);
-            Directory.Move(staging, dir);
+            if (options.Update)
+            {
+                if (!WaitUntilClosed(dir, options)) throw new TimeoutException("Cut Browser didn't close, so the update wasn't installed.");
+                SwapIn(dir, staging, previous);
+            }
+            else
+            {
+                progress(0.92, "Closing the old version…");
+                CloseRunning(dir);
+                if (Directory.Exists(dir)) Directory.Move(dir, previous);
+                Directory.Move(staging, dir);
+            }
             DeleteDir(previous);
 
             progress(0.95, "Adding Cut Browser to Windows…");
@@ -881,7 +965,29 @@ namespace CutBrowserSetup
             }
 
             int exitCode = 0;
-            if (options.Silent)
+            if (options.Update)
+            {
+                // One update at a time: one may already be waiting for a Tor
+                // window to close when Cut Browser quits again.
+                bool first;
+                using (var updating = new Mutex(true, @"Local\CutBrowserUpdate", out first))
+                {
+                    if (!first) return 0;
+                    var dir = options.InstallDir ?? Installer.InstalledDir() ?? Installer.DefaultDir;
+                    try
+                    {
+                        Installer.Install(dir, options, (f, m) => { });
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Error.WriteLine(e.Message);
+                        exitCode = 1;
+                    }
+                    if (options.Relaunch) Installer.Launch(dir);
+                    updating.ReleaseMutex();
+                }
+            }
+            else if (options.Silent)
             {
                 try
                 {
