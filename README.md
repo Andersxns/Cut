@@ -129,7 +129,7 @@ When Cut Search connects through Tor, as it does in Cut Browser's Tor windows, a
 Sites with child sexual abuse material are left out, three ways:
 
 - Ahmia bans them from its index.
-- Ahmia publishes the banned sites, as MD5 sums of their addresses, for other search engines to filter with; Cut Search fetches that list over Tor twice a day and drops every result on it.
+- Ahmia publishes the sites it bans, as MD5 sums of their addresses, for other search engines to filter with; Cut Search fetches that list over Tor twice a day and drops every result on it. (The list isn't only abuse sites: it also holds sites Ahmia leaves out for other reasons, such as DuckDuckGo's and Proton Mail's onion sites, so it's used to filter search results but not to block sites in Tor windows.)
 - Searches plainly looking for such material get no results, only where to report it ([NCMEC CyberTipline](https://report.cybertip.org/), [Internet Watch Foundation](https://report.iwf.org.uk/)) or get confidential help ([Stop It Now](https://www.stopitnow.org/)), and results described in those terms are dropped.
 
 With safe search set to *Strict*, sexual results are left out too.
