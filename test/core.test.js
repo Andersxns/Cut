@@ -11,6 +11,7 @@ import { resolveBang, suggestBangs } from '../src/bangs.js';
 import { normalizeHash, buildMagnet, guessCategory, hashFromMagnet } from '../src/engines/torrents/common.js';
 import { mergeWeb, offTopic, dropOutliers, webEnginesFor } from '../src/search/web.js';
 import brave, { braveParams, parseBrave, braveError } from '../src/engines/web/brave.js';
+import rightdao, { parseRightDao } from '../src/engines/web/rightdao.js';
 import { runEngines } from '../src/search/run.js';
 import { mergeTorrents, rankTorrents } from '../src/search/torrents.js';
 import { decodeBingUrl } from '../src/engines/web/bing.js';
@@ -284,6 +285,21 @@ test('Brave Search: its requests, its answers and its errors', async () => {
   assert.equal((await error(429, 'RATE_LIMITED')).code, 'ratelimit');
   assert.equal((await error(422, 'VALIDATION')).code, 'http');
   assert.equal((await braveError(new Response('<html>', { status: 502 }))).code, 'http');
+});
+
+test('Right Dao results are read from its page', async () => {
+  const page = `<div class="results">
+    <div class="item"><div class="title"><a href="https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html" target="_blank"><div class="ellipsis-lg">Understanding <span class="em">Ownership</span><s></s></div></a></div>
+      <div class="description"><span class="date">Sep 13, 2023 - </span>Ownership is Rust’s most unique feature.&#8203;</div>
+      <div class="info"><span class="url">https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html</span></div></div>
+    <div class="item"><div class="title"><a href="/search/advanced">Advanced Search</a></div></div>
+  </div>`;
+  assert.deepEqual(parseRightDao(page), [
+    { url: 'https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html', title: 'Understanding Ownership', snippet: 'Ownership is Rust’s most unique feature.' },
+  ]);
+  assert.deepEqual(parseRightDao('<div class="results">Your search returns no result.</div>'), []);
+  assert.throws(() => parseRightDao('<html><body>Please wait…</body></html>'), { code: 'parse' }, 'any other page is a failure, not "no results"');
+  assert.deepEqual(await rightdao.search({ query: 'x', page: 1, safe: 'strict', region: getRegion('wt-wt') }), [], 'it has no safe search, so it sits out Strict');
 });
 
 test('an engine that needs an API key runs only with one, and the key stays private', () => {

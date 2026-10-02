@@ -93,7 +93,7 @@ export const REGIONS = REGION_TABLE.map(([code, name, market]) => {
 const REGION_BY_CODE = new Map(REGIONS.map((r) => [r.code, r]));
 export const getRegion = (code) => REGION_BY_CODE.get(code) || REGION_BY_CODE.get('wt-wt');
 
-export const DEFAULT_WEB_ENGINES = ['duckduckgo', 'bing', 'wikipedia', 'marginalia'];
+export const DEFAULT_WEB_ENGINES = ['duckduckgo', 'bing', 'rightdao', 'wikipedia', 'marginalia'];
 export const DEFAULT_TORRENT_SOURCES = ['piratebay', 'nyaa', 'torrentscsv', 'knaben', 'archive'];
 export const SEARCH_TYPES = ['web', 'images', 'videos', 'news', 'torrents'];
 export const FRONTEND_SERVICES = ['youtube', 'reddit', 'twitter', 'medium'];

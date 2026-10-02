@@ -1,6 +1,7 @@
 import duckduckgo from './web/duckduckgo.js';
 import bing from './web/bing.js';
 import brave from './web/brave.js';
+import rightdao from './web/rightdao.js';
 import { wikipedia, marginalia, mwmbl, wiby } from './web/independent.js';
 import { piratebay, nyaa, torrentscsv, knaben, archive, bt4g } from './torrents/sources.js';
 import { ddgImages, bingImages } from './media/images.js';
@@ -12,7 +13,7 @@ duckduckgo.supportsTime = true;
 bing.supportsTime = true;
 brave.supportsTime = true;
 
-export const WEB_ENGINES = [duckduckgo, bing, brave, wikipedia, marginalia, mwmbl, wiby];
+export const WEB_ENGINES = [duckduckgo, bing, brave, rightdao, wikipedia, marginalia, mwmbl, wiby];
 export const TORRENT_SOURCES = [piratebay, nyaa, torrentscsv, knaben, archive, bt4g];
 
 // Media verticals: the primary engine answers, the fallback steps in if it fails.

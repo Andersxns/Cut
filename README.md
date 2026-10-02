@@ -108,11 +108,13 @@ Profiles live in `%APPDATA%\Cut` on Windows and `~/.cut` on Linux, separate from
 
 | Tab | Sources | Notes |
 | --- | --- | --- |
-| **All** (web) | DuckDuckGo, Bing, Wikipedia, Marginalia · optional Mwmbl, Wiby, Brave Search (with your own API key) | Queried in parallel, merged by weighted reciprocal-rank fusion. Pages several engines agree on rise, and so do pages that mention more of your search; duplicates fold together. An engine that answers for only one word of a longer search is left out. |
+| **All** (web) | DuckDuckGo, Bing, Right Dao, Wikipedia, Marginalia · optional Mwmbl, Wiby, Brave Search (with your own API key) | Queried in parallel, merged by weighted reciprocal-rank fusion. Pages several engines agree on rise, and so do pages that mention more of your search; duplicates fold together. An engine that answers for only one word of a longer search is left out. |
 | **Images** | DuckDuckGo → Bing fallback | Justified grid, lightbox, filters for size, color, type, layout and license. |
 | **Videos** | DuckDuckGo → YouTube fallback | Links straight to the host; players are never embedded. |
 | **News** | DuckDuckGo + Bing News | Blended and de-duplicated; sort by relevance or newest. |
 | **Torrents** | The Pirate Bay, Nyaa, Torrents-CSV, Knaben, Internet Archive · optional BT4G | Merged by info hash, relevance-filtered, with seed health, category filters, sorting, magnet links and `.torrent` files where available. |
+
+**Right Dao** is a free, independent search engine from the US with an index of its own, asked alongside the others. Its results are in English and can be a few years old, and since it has no safe search, it sits out searches with safe search set to *Strict*. Like Bing's and DuckDuckGo's, its robots.txt asks automated tools not to fetch its search pages; Cut Search asks it once for each search you make, like a browser would, and you can turn it off in *Settings → Search engines*.
 
 **Brave Search** has an index of its own, and Cut Search can ask it through its official API with a key of yours: make one at [Brave's Search API](https://brave.com/search/api/), then tick *Brave Search* in *Settings → Search engines* and paste the key. Brave's plans include $5 of credit a month, about 1,000 searches; it asks for a card to confirm who you are, but doesn't charge for the included credit. Brave sees your searches with your key, so it can link them to your Brave account. The key stays in Cut Search's cookie on your device and is never put in settings codes.
 
