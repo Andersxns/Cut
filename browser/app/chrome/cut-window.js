@@ -169,6 +169,26 @@
       }
     });
     const busy = el => el.matches(":hover, :focus-within") || [...openedFrom.values()].includes(el);
+    // A panel that opens by itself from a part that's tucked away (a new
+    // download's panel, from the Downloads button) brings that part out at
+    // once, so the panel opens at its button, not off the window's edge.
+    document.addEventListener("popupshowing", e => {
+      const source = e.target.triggerNode || e.target.anchorNode;
+      if (!root.hasAttribute("cut-compact") || !source) {
+        return;
+      }
+      for (const [part, name] of [
+        [toolbox, "cut-toolbar-peek"],
+        [sidebar, "cut-sidebar-peek"],
+      ]) {
+        if (part.contains(source) && !root.hasAttribute(name)) {
+          root.setAttribute("cut-peek-instant", "");
+          peek(name, true);
+          part.getBoundingClientRect(); // laid out before the panel is placed
+          requestAnimationFrame(() => root.removeAttribute("cut-peek-instant"));
+        }
+      }
+    });
 
     window.addEventListener("mousemove", e => {
       if (!root.hasAttribute("cut-compact")) {

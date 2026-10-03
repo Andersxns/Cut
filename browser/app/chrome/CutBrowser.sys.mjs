@@ -15,7 +15,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
 });
 
-const TOOLBAR_VERSION = 3;
+const TOOLBAR_VERSION = 4;
 const TOOLBAR_ORDER = [
   "sidebar-button",
   "back-button",
@@ -24,6 +24,7 @@ const TOOLBAR_ORDER = [
   "vertical-spacer",
   "urlbar-container",
   "cut-tor-button", // Tor windows only
+  "downloads-button", // hidden until there are downloads
   "cut-compact-button",
   "reset-pbm-toolbar-button",
   "unified-extensions-button",
@@ -404,11 +405,23 @@ export const CutBrowser = {
       let urlbar = CustomizableUI.getPlacementOfWidget("urlbar-container");
       CustomizableUI.addWidgetToArea("cut-tor-button", CustomizableUI.AREA_NAVBAR, urlbar ? urlbar.position + 1 : undefined);
     }
-    if (Services.prefs.getIntPref("cut.ui.toolbarVersion", 0) >= TOOLBAR_VERSION) {
+    let version = Services.prefs.getIntPref("cut.ui.toolbarVersion", 0);
+    if (version >= TOOLBAR_VERSION) {
       return;
     }
     Services.prefs.setIntPref("cut.ui.toolbarVersion", TOOLBAR_VERSION);
     let navbar = CustomizableUI.AREA_NAVBAR;
+    // Tabs start in the sidebar, so a new profile gets Firefox's vertical-tabs
+    // toolbar, which has no Downloads button: and without it, no panel opens
+    // when a download starts. It goes beside the address bar (hidden until
+    // there are downloads, as in Firefox), unless it's somewhere already.
+    if (!CustomizableUI.getPlacementOfWidget("downloads-button")) {
+      let after = ["cut-tor-button", "urlbar-container"].map(id => CustomizableUI.getPlacementOfWidget(id)).find(p => p?.area == navbar);
+      CustomizableUI.addWidgetToArea("downloads-button", navbar, after ? after.position + 1 : undefined);
+    }
+    if (version >= 3) {
+      return;
+    }
     // Placing the sidebar button now also stops Firefox from appending one
     // at the far end on a later start.
     for (let id of ["sidebar-button", "stop-reload-button", "cut-compact-button"]) {

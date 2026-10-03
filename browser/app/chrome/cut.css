@@ -382,6 +382,11 @@ sidebar-main {
     transform: none;
   }
 
+  /* Out at once, for a panel that opens by itself (cut-window.js). */
+  &[cut-peek-instant] :is(#navigator-toolbox, #sidebar-container) {
+    transition: none;
+  }
+
   #tabbrowser-tabbox {
     margin: var(--cut-gap) !important;
   }
