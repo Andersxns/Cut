@@ -27,6 +27,7 @@ pref("cut.tor.instance", false); // true only in the Tor window's own profile
 
 pref("cut.update.enabled", true); // check GitHub every six hours; on Windows, download new versions and install them when Cut Browser closes
 pref("cut.update.url", "https://api.github.com/repos/Andersxns/Cut/releases/latest");
+pref("app.update.url.manual", "https://github.com/Andersxns/Cut/releases/latest"); // "Updates available at …" on Settings' About page
 
 // ---------- Layout: vertical tabs, split view, no clutter ----------
 

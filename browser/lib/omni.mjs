@@ -31,6 +31,9 @@ function aboutDialogStrings(text) {
   text = replaceFluent(text, 'aboutDialog-version', `aboutDialog-version = Cut Browser ${PRODUCT.version} · Firefox { $version } ({ $bits }-bit)`, name);
   text = replaceFluent(text, 'aboutdialog-version-arch', `aboutdialog-version-arch = Cut Browser ${PRODUCT.version} · Firefox { $version } ({ $arch })`, name);
   text = replaceFluent(text, 'update-policy-disabled', 'update-policy-disabled = Cut Browser updates itself: see Settings › Cut Browser.', name);
+  // Settings' About page shows Cut Browser's updates (cut-prefs.js); this is
+  // only seen if that ever fails.
+  text = replaceFluent(text, 'settings-update-policy-disabled', 'settings-update-policy-disabled =\n    .label = Cut Browser updates itself: see Settings › Cut Browser.', name);
   text = replaceFluent(
     text,
     'community-2',
@@ -103,8 +106,13 @@ export function patchBrowserOmni(file, { appDir }) {
     if (!entries.has(name) && !name.startsWith('chrome/browser/content/branding/')) throw new Error(`${name} is missing from browser/omni.ja`);
     put(name, data);
   }
-  // Cut Browser's own version, which the updater compares with new releases.
-  put('defaults/preferences/cut.js', `${fs.readFileSync(path.join(appDir, 'prefs', 'cut.js'), 'utf8').trimEnd()}\n\npref("cut.version", "${PRODUCT.version}");\n`);
+  // Cut Browser's own version, which the updater compares with new releases,
+  // and its release notes ("What's new" in Settings and the About dialog).
+  const releaseNotes = `https://github.com/Andersxns/Cut/releases/tag/v${PRODUCT.version}`;
+  put(
+    'defaults/preferences/cut.js',
+    `${fs.readFileSync(path.join(appDir, 'prefs', 'cut.js'), 'utf8').trimEnd()}\n\npref("cut.version", "${PRODUCT.version}");\npref("app.releaseNotesURL", "${releaseNotes}");\npref("app.releaseNotesURL.aboutDialog", "${releaseNotes}");\n`,
+  );
 
   const chromeDir = path.join(appDir, 'chrome');
   for (const rel of walk(chromeDir)) put(CUT_CHROME + rel, fs.readFileSync(path.join(chromeDir, rel)));
@@ -138,6 +146,14 @@ export function patchBrowserOmni(file, { appDir }) {
     t = insertBefore(t, '<html:template id="template-paneGeneral">', `${pane}\n`, 'preferences.xhtml');
     return insertBefore(t, '<script src="chrome://browser/content/preferences/extensionControlled.js"/>', '<script src="chrome://browser/content/cut/cut-prefs.js"/>\n', 'preferences.xhtml');
   });
+
+  // Settings' About page (adapted by cut-prefs.js): Cut's mark on its heading
+  // rather than Firefox's logo (cosmetic, so it's skipped if Firefox moved
+  // it), and the label its update-history row takes while an update waits.
+  edit('chrome/browser/content/browser/preferences/preferences.js', (t) =>
+    t.replace(/(about: \{\s*l10nId: "about-firefox-header",\s*iconSrc: )"chrome:\/\/browser\/skin\/sidebar\/firefox\.svg"/, '$1"chrome://browser/content/cut/icons/mark.svg"'),
+  );
+  edit('localization/en-US/browser/preferences/preferences.ftl', (t) => `${t.trimEnd()}\n\ncut-update-whats-new =\n    .label = What’s new in { -brand-short-name } { $version }\n    .accesskey = W\n`);
 
   writeZip(file, entries);
   return entries.size;

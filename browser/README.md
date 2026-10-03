@@ -138,8 +138,11 @@ waits until every Cut Browser process from that folder has exited (Tor
 windows included; nothing is closed for it), and swaps the folders, keeping
 the profile. On Linux, and on Windows copies not installed with the installer,
 it only says in Settings that a new version is out. *Settings → Cut Browser*
-shows the update status and the Firefox version you're on. If you build Cut
-Browser yourself, `node build.mjs` always fetches the newest Firefox and Tor.
+shows the update status and the Firefox version you're on, and so does
+*Settings → About Cut Browser*: `cut-prefs.js` points the rows of Firefox's
+own About page (whose updater Cut Browser turns off) at Cut Browser's
+updater, release notes and GitHub. If you build Cut Browser yourself,
+`node build.mjs` always fetches the newest Firefox and Tor.
 
 ## Build
 

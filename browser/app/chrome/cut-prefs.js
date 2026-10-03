@@ -37,6 +37,21 @@
     return hours > -24 ? relative.format(hours, "hour") : relative.format(Math.round(hours / 24), "day");
   }
 
+  const RELEASES = "https://github.com/Andersxns/Cut/releases";
+  const ISSUES = "https://github.com/Andersxns/Cut/issues";
+
+  // Cut Browser's update states (CutUpdate.state.status), as the states of
+  // the update row on Firefox's About page.
+  const ABOUT_UPDATE_STATES = {
+    idle: s => (s.checkedAt ? "noUpdatesFound" : "checkForUpdates"),
+    checking: () => "checkingForUpdates",
+    latest: () => "noUpdatesFound",
+    downloading: () => "downloading",
+    ready: () => "apply",
+    manual: () => "manualUpdate",
+    failed: () => "checkingFailed",
+  };
+
   const UPDATE_STATES = {
     idle: s =>
       !CutUpdate.enabled
@@ -108,6 +123,11 @@
       const version = document.getElementById("cutVersion");
       version.textContent = `Cut Browser ${CutUpdate.current}, built on Firefox ${Services.appinfo.version}. Firefox is a trademark of the Mozilla Foundation; Cut Browser is not affiliated with Mozilla. The Firefox source code is available under the Mozilla Public License 2.0.`;
       this.initUpdates();
+      try {
+        this.takeOverAboutPage();
+      } catch (e) {
+        console.error("[Cut] couldn't adapt the About page", e);
+      }
 
       const update = () => this.showStatus(CutSearch.state);
       Services.obs.addObserver(update, "cut-search-state-changed");
@@ -123,6 +143,7 @@
       const status = document.getElementById("cutUpdateStatus");
       const restart = document.getElementById("cutUpdateRestart");
       const download = document.getElementById("cutUpdateDownload");
+      const notes = document.getElementById("cutUpdateNotes");
       const check = document.getElementById("cutUpdateCheck");
       if (!CutUpdate.canInstall) {
         document.getElementById("cutUpdateEnabled").description = "Cut Browser asks GitHub for new versions every six hours, and says so here when one is out.";
@@ -133,6 +154,8 @@
         status.dataset.state = s.status;
         restart.hidden = s.status != "ready";
         download.hidden = s.status != "manual";
+        notes.hidden = !(s.status == "ready" || s.status == "downloading");
+        notes.label = `What’s new in ${s.version}`;
         check.disabled = s.status == "checking" || s.status == "downloading";
       };
       Services.obs.addObserver(show, CutUpdate.STATE_TOPIC);
@@ -143,8 +166,92 @@
       });
       check.addEventListener("command", () => CutUpdate.check({ manual: true }));
       restart.addEventListener("command", () => CutUpdate.restartNow());
-      download.addEventListener("command", () => openTrustedLinkIn(CutUpdate.state.url || "https://github.com/Andersxns/Cut/releases/latest", "tab"));
+      notes.addEventListener("command", () => openTrustedLinkIn(`${RELEASES}/tag/v${CutUpdate.state.version}`, "tab"));
+      download.addEventListener("command", () => openTrustedLinkIn(CutUpdate.state.url || `${RELEASES}/latest`, "tab"));
       show();
+    },
+
+    // Firefox's About page in Settings runs Firefox's updater, which Cut
+    // Browser turns off ("Updates disabled by your organization"). Its rows
+    // show Cut Browser's instead: the update row and its buttons drive
+    // CutUpdate, the version is Cut Browser's (with Firefox's), the update
+    // history is Cut Browser's releases, and help and feedback go to its
+    // GitHub. The settings are the page's own, so they're adapted in place.
+    takeOverAboutPage() {
+      const { Preferences } = ChromeUtils.importESModule("chrome://global/content/preferences/Preferences.mjs", { global: "current" });
+      const setting = id => Preferences.getSetting(id);
+
+      const state = setting("updateState");
+      if (state?.config) {
+        if (CutTor.isTorApp) {
+          // Updated along with normal windows' copy of the browser.
+          state.config.get = () => "otherInstanceHandlingUpdates";
+        } else {
+          // Its buttons call gAppUpdater. Firefox's stays for the Privacy
+          // page's security status, which shares its AppUpdater.
+          const firefoxUpdater = window.gAppUpdater;
+          window.gAppUpdater = {
+            _appUpdater: firefoxUpdater?._appUpdater,
+            checkForUpdates: () => CutUpdate.check({ manual: true }),
+            startDownload() {},
+            buttonRestartAfterDownload: () => CutUpdate.restartNow(),
+            destroy: () => firefoxUpdater?.destroy(),
+          };
+          state.config.get = () => (ABOUT_UPDATE_STATES[CutUpdate.state.status] || ABOUT_UPDATE_STATES.idle)(CutUpdate.state);
+          state.config.getControlConfig = config => {
+            config.controlAttrs = { ".linkURL": "", ".updateVersion": CutUpdate.state.version || "", ".transfer": `${Math.round((CutUpdate.state.progress || 0) * 100)}%` };
+            return config;
+          };
+          const show = () => state.onChange();
+          Services.obs.addObserver(show, CutUpdate.STATE_TOPIC);
+          window.addEventListener("unload", () => Services.obs.removeObserver(show, CutUpdate.STATE_TOPIC));
+        }
+        state.onChange();
+      }
+
+      // "Version 1.2.2 · Firefox 157.0 (64-bit)"; "What's new" opens this
+      // version's release notes (app.releaseNotesURL).
+      const info = setting("updateAppInfo");
+      const firefoxInfo = info?.config.getControlConfig;
+      if (firefoxInfo) {
+        info.config.getControlConfig = (config, ...rest) => {
+          config = firefoxInfo.call(info.config, config, ...rest);
+          const version = String(config.controlAttrs?.[".version"] || "");
+          if (version && !version.startsWith(`${CutUpdate.current} `)) {
+            config.controlAttrs[".version"] = `${CutUpdate.current} · Firefox ${version}`;
+          }
+          return config;
+        };
+        info.onChange();
+      }
+
+      // Cut Browser's releases are its update history. While an update is on
+      // its way, the row opens that version's release notes instead.
+      const history = setting("showUpdateHistory");
+      if (history) {
+        const pending = () => (["downloading", "ready", "manual"].includes(CutUpdate.state.status) && CutUpdate.state.version) || "";
+        history.config.disabled = () => false;
+        history.config.getControlConfig = config =>
+          pending()
+            ? { ...config, l10nId: "cut-update-whats-new", l10nArgs: { version: pending() } }
+            : { ...config, l10nId: "update-history-2", l10nArgs: undefined };
+        history.config.onUserClick = () => openTrustedLinkIn(pending() ? `${RELEASES}/tag/v${pending()}` : RELEASES, "tab");
+        const show = () => history.onChange();
+        Services.obs.addObserver(show, CutUpdate.STATE_TOPIC);
+        window.addEventListener("unload", () => Services.obs.removeObserver(show, CutUpdate.STATE_TOPIC));
+        history.onChange();
+      }
+
+      for (const [id, href] of [
+        ["supportGetHelp", ISSUES],
+        ["supportShareIdeas", `${ISSUES}/new`],
+      ]) {
+        const link = setting(id);
+        if (link) {
+          link.config.getControlConfig = config => ({ ...config, supportPage: undefined, controlAttrs: { ...config.controlAttrs, href } });
+          link.onChange();
+        }
+      }
     },
 
     // Tor windows: opened and set up from a normal window; a Tor window's
