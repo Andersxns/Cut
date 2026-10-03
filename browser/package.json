@@ -1,6 +1,6 @@
 {
   "name": "cut-browser",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "type": "module",
   "description": "Cut Browser: a private browser built on Firefox, with Cut Search built in",
